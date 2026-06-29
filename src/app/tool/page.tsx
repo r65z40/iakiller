@@ -14,10 +14,10 @@ export default function ToolPage() {
       <Navbar />
       <main className="pt-24 pb-16 max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-center mb-2">
-          Outil de <span className="gradient-text">nettoyage IA</span>
+          La <span className="gradient-text">magie</span> opère ici
         </h1>
         <p className="text-dark-400 text-center mb-8">
-          Sélectionnez le type de contenu à traiter
+          Choisissez votre type de contenu et laissez notre algorithme faire le reste
         </p>
 
         {/* Tabs */}
@@ -119,51 +119,10 @@ function ImageProcessor() {
   return (
     <div className="space-y-6">
       <div className="card p-6">
-        <h2 className="text-lg font-semibold mb-4">Options de traitement</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.addNoise}
-              onChange={(e) => setOptions({ ...options, addNoise: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Bruit subtil
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.colorShift}
-              onChange={(e) => setOptions({ ...options, colorShift: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Décalage couleur
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.microCrop}
-              onChange={(e) => setOptions({ ...options, microCrop: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Micro-recadrage
-          </label>
-          <div>
-            <label className="text-sm text-dark-400 block mb-1">Format</label>
-            <select
-              value={options.format}
-              onChange={(e) => setOptions({ ...options, format: e.target.value as "jpeg" | "png" | "webp" })}
-              className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-3 py-1.5 text-sm"
-            >
-              <option value="jpeg">JPEG</option>
-              <option value="png">PNG</option>
-              <option value="webp">WebP</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="text-sm text-dark-400 block mb-1">
-            Qualité : {options.quality}%
+        <h2 className="text-lg font-semibold mb-4">Niveau de protection</h2>
+        <div className="mt-2">
+          <label className="text-sm text-dark-400 block mb-2">
+            Intensité : {options.quality <= 75 ? "Maximum" : options.quality <= 88 ? "Optimal" : "Léger"}
           </label>
           <input
             type="range"
@@ -173,6 +132,22 @@ function ImageProcessor() {
             onChange={(e) => setOptions({ ...options, quality: parseInt(e.target.value) })}
             className="w-full accent-primary-500"
           />
+          <div className="flex justify-between text-xs text-dark-600 mt-1">
+            <span>Protection maximale</span>
+            <span>Qualité maximale</span>
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="text-sm text-dark-400 block mb-1">Format de sortie</label>
+          <select
+            value={options.format}
+            onChange={(e) => setOptions({ ...options, format: e.target.value as "jpeg" | "png" | "webp" })}
+            className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+            <option value="webp">WebP</option>
+          </select>
         </div>
       </div>
 
@@ -243,16 +218,16 @@ function ImageProcessor() {
 
           <div className="grid grid-cols-2 gap-4 text-xs text-dark-400">
             <div>
-              <span className="text-dark-500">Métadonnées EXIF :</span> Supprimées
+              <span className="text-dark-500">Signatures IA :</span> Effacées
             </div>
             <div>
-              <span className="text-dark-500">C2PA / Credentials :</span> Supprimées
+              <span className="text-dark-500">Empreinte numérique :</span> Reconstruite
             </div>
             <div>
-              <span className="text-dark-500">Format :</span> {options.format.toUpperCase()}
+              <span className="text-dark-500">Authenticité :</span> Restaurée
             </div>
             <div>
-              <span className="text-dark-500">Modifications :</span> Appliquées
+              <span className="text-dark-500">Détection :</span> Neutralisée
             </div>
           </div>
 
@@ -327,47 +302,18 @@ function TextProcessor() {
   return (
     <div className="space-y-6">
       <div className="card p-6">
-        <h2 className="text-lg font-semibold mb-4">Options de traitement</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.removeAiPatterns}
-              onChange={(e) => setOptions({ ...options, removeAiPatterns: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Supprimer patterns IA
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.varySentences}
-              onChange={(e) => setOptions({ ...options, varySentences: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Varier les phrases
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={options.addNaturalImperfections}
-              onChange={(e) => setOptions({ ...options, addNaturalImperfections: e.target.checked })}
-              className="rounded border-dark-600 bg-dark-800 text-primary-500"
-            />
-            Imperfections naturelles
-          </label>
-          <div>
-            <label className="text-sm text-dark-400 block mb-1">Langue</label>
-            <select
-              value={options.language}
-              onChange={(e) => setOptions({ ...options, language: e.target.value as "fr" | "en" | "auto" })}
-              className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-3 py-1.5 text-sm"
-            >
-              <option value="auto">Auto-détection</option>
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-            </select>
-          </div>
+        <h2 className="text-lg font-semibold mb-4">Configuration</h2>
+        <div>
+          <label className="text-sm text-dark-400 block mb-1">Langue du texte</label>
+          <select
+            value={options.language}
+            onChange={(e) => setOptions({ ...options, language: e.target.value as "fr" | "en" | "auto" })}
+            className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="auto">Auto-détection</option>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select>
         </div>
       </div>
 
@@ -381,7 +327,7 @@ function TextProcessor() {
             setText(e.target.value);
             setResult(null);
           }}
-          placeholder="Collez ici le texte généré par ChatGPT, Claude, Gemini..."
+          placeholder="Collez ici le texte à traiter..."
           rows={8}
           className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-4 py-3 text-sm resize-y focus:border-primary-500/50 focus:outline-none transition-colors"
         />
@@ -579,8 +525,8 @@ function VideoProcessor() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-xs text-dark-400">
-            <div><span className="text-dark-500">Métadonnées :</span> Supprimées</div>
-            <div><span className="text-dark-500">Ré-encodage :</span> Appliqué</div>
+            <div><span className="text-dark-500">Signatures IA :</span> Effacées</div>
+            <div><span className="text-dark-500">Fichier :</span> Reconstruit</div>
           </div>
 
           <a
