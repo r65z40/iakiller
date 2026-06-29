@@ -77,6 +77,32 @@ npm start
 
 L'application est accessible sur **http://localhost:3000**
 
+#### Utiliser un port différent
+
+Par défaut, Next.js utilise le port 3000. Pour changer de port :
+
+```bash
+# Mode développement sur le port 8080
+npm run dev -- -p 8080
+
+# Mode production sur le port 8080
+npm run build
+npm start -- -p 8080
+```
+
+Vous pouvez aussi définir le port via la variable d'environnement `PORT` :
+
+```bash
+# Ajoutez dans votre .env
+PORT=8080
+
+# Ou directement en ligne de commande
+PORT=8080 npm run dev
+PORT=8080 npm start
+```
+
+> **Astuce** : Si le port 3000 est déjà utilisé par une autre application, Next.js vous proposera automatiquement le port suivant (3001, 3002, etc.).
+
 ---
 
 ## Utilisation
@@ -216,9 +242,16 @@ docker run -p 3000:3000 --env-file .env iakiller
 
 ## Installation de FFmpeg (optionnel, pour les vidéos)
 
+Sans FFmpeg, le traitement vidéo se limite au nettoyage basique. Avec FFmpeg, l'outil ré-encode complètement la vidéo (nouveau codec, nouveaux paramètres), ce qui supprime toute trace technique.
+
 ### macOS
 
 ```bash
+# Avec Homebrew (recommandé)
+brew install ffmpeg
+
+# Si Homebrew n'est pas installé :
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew install ffmpeg
 ```
 
@@ -229,17 +262,52 @@ sudo apt update
 sudo apt install -y ffmpeg
 ```
 
+### Fedora / CentOS / RHEL
+
+```bash
+# Fedora
+sudo dnf install ffmpeg
+
+# CentOS / RHEL (nécessite EPEL + RPM Fusion)
+sudo dnf install epel-release
+sudo dnf install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm
+sudo dnf install ffmpeg
+```
+
+### Arch Linux
+
+```bash
+sudo pacman -S ffmpeg
+```
+
 ### Windows
 
-1. Téléchargez depuis [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
-2. Extrayez l'archive
-3. Ajoutez le dossier `bin/` au PATH système
+**Méthode 1 — avec winget (Windows 10/11)** :
 
-Vérifiez l'installation :
+```powershell
+winget install FFmpeg
+```
+
+**Méthode 2 — manuelle** :
+
+1. Allez sur [gyan.dev/ffmpeg/builds](https://www.gyan.dev/ffmpeg/builds/)
+2. Téléchargez la version **release full** (fichier `.zip`)
+3. Extrayez l'archive dans un dossier, par exemple `C:\ffmpeg`
+4. Ajoutez `C:\ffmpeg\bin` au PATH système :
+   - Ouvrez **Paramètres** > **Système** > **Informations système** > **Paramètres avancés du système**
+   - Cliquez sur **Variables d'environnement**
+   - Dans **Variables système**, sélectionnez `Path` > **Modifier**
+   - Cliquez **Nouveau** et ajoutez `C:\ffmpeg\bin`
+   - Validez avec **OK**
+5. Fermez et rouvrez votre terminal
+
+### Vérification
 
 ```bash
 ffmpeg -version
 ```
+
+Si la commande affiche les informations de version, FFmpeg est correctement installé. Relancez IAKiller pour qu'il le détecte automatiquement — aucune configuration supplémentaire n'est nécessaire.
 
 ---
 
