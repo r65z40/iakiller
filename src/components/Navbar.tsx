@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useLocale } from "@/components/LanguageProvider";
+import { t } from "@/lib/i18n";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { locale, setLocale } = useLocale();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050510]/80 backdrop-blur-xl border-b border-[#1e1e4a]">
@@ -17,18 +20,27 @@ export default function Navbar() {
             <span className="text-lg font-bold gradient-text">IAKiller</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             <Link href="/" className="text-dark-400 hover:text-white transition-colors text-sm">
-              Accueil
+              {t("nav", "home", locale)}
             </Link>
             <Link href="/tool" className="text-dark-400 hover:text-white transition-colors text-sm">
-              Outil
+              {t("nav", "tool", locale)}
             </Link>
+
+            <button
+              onClick={() => setLocale(locale === "en" ? "fr" : "en")}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#1e1e4a] text-dark-400 hover:text-white hover:border-primary-500/30 transition-colors text-xs font-medium"
+            >
+              <span className="text-base leading-none">{locale === "en" ? "🇫🇷" : "🇬🇧"}</span>
+              {locale === "en" ? "FR" : "EN"}
+            </button>
+
             <Link
               href="/tool"
               className="px-4 py-2 rounded-lg gradient-bg text-white text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              Commencer
+              {t("nav", "getStarted", locale)}
             </Link>
           </div>
 
@@ -49,16 +61,23 @@ export default function Navbar() {
         {menuOpen && (
           <div className="md:hidden pb-4 space-y-2">
             <Link href="/" className="block px-3 py-2 text-dark-400 hover:text-white text-sm">
-              Accueil
+              {t("nav", "home", locale)}
             </Link>
             <Link href="/tool" className="block px-3 py-2 text-dark-400 hover:text-white text-sm">
-              Outil
+              {t("nav", "tool", locale)}
             </Link>
+            <button
+              onClick={() => setLocale(locale === "en" ? "fr" : "en")}
+              className="flex items-center gap-1.5 px-3 py-2 text-dark-400 hover:text-white text-sm w-full"
+            >
+              <span className="text-base leading-none">{locale === "en" ? "🇫🇷" : "🇬🇧"}</span>
+              {locale === "en" ? "Français" : "English"}
+            </button>
             <Link
               href="/tool"
               className="block px-3 py-2 rounded-lg gradient-bg text-white text-sm font-medium text-center"
             >
-              Commencer
+              {t("nav", "getStarted", locale)}
             </Link>
           </div>
         )}

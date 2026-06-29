@@ -3,24 +3,25 @@
 import { useState, useRef, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import AdBanner from "@/components/AdBanner";
+import { useLocale } from "@/components/LanguageProvider";
+import { ts } from "@/lib/i18n";
 
 type TabType = "image" | "text" | "video";
 
 export default function ToolPage() {
   const [activeTab, setActiveTab] = useState<TabType>("image");
+  const { locale } = useLocale();
+  const toolT = ts("tool", locale);
 
   return (
     <>
       <Navbar />
       <main className="pt-24 pb-16 max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-center mb-2">
-          La <span className="gradient-text">magie</span> opère ici
+          {toolT.title}<span className="gradient-text">{toolT.titleHighlight}</span>{toolT.titleEnd}
         </h1>
-        <p className="text-dark-400 text-center mb-8">
-          Choisissez votre type de contenu et laissez notre algorithme faire le reste
-        </p>
+        <p className="text-dark-400 text-center mb-8">{toolT.subtitle}</p>
 
-        {/* Tabs */}
         <div className="flex gap-2 justify-center mb-8">
           {(["image", "text", "video"] as TabType[]).map((tab) => (
             <button
@@ -30,7 +31,7 @@ export default function ToolPage() {
                 activeTab === tab ? "tab-active" : "tab-inactive"
               }`}
             >
-              {tab === "image" ? "Image" : tab === "text" ? "Texte" : "Vidéo"}
+              {tab === "image" ? toolT.tabImage : tab === "text" ? toolT.tabText : toolT.tabVideo}
             </button>
           ))}
         </div>
@@ -48,6 +49,9 @@ export default function ToolPage() {
 }
 
 function ImageProcessor() {
+  const { locale } = useLocale();
+  const i = ts("image", locale);
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -64,7 +68,7 @@ function ImageProcessor() {
 
   const handleFile = useCallback((f: File) => {
     if (!f.type.startsWith("image/")) {
-      setError("Veuillez sélectionner une image");
+      setError(i.selectImage);
       return;
     }
     setFile(f);
@@ -73,7 +77,7 @@ function ImageProcessor() {
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target?.result as string);
     reader.readAsDataURL(f);
-  }, []);
+  }, [i.selectImage]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -101,28 +105,29 @@ function ImageProcessor() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors du traitement");
+        throw new Error(data.error || "Error");
       }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const info = JSON.parse(res.headers.get("X-Process-Info") || "{}");
-
       setResult({ url, info });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setProcessing(false);
     }
   };
 
+  const intensityLabel = options.quality <= 75 ? i.maximum : options.quality <= 88 ? i.optimal : i.light;
+
   return (
     <div className="space-y-6">
       <div className="card p-6">
-        <h2 className="text-lg font-semibold mb-4">Niveau de protection</h2>
+        <h2 className="text-lg font-semibold mb-4">{i.protectionLevel}</h2>
         <div className="mt-2">
           <label className="text-sm text-dark-400 block mb-2">
-            Intensité : {options.quality <= 75 ? "Maximum" : options.quality <= 88 ? "Optimal" : "Léger"}
+            {i.intensity}: {intensityLabel}
           </label>
           <input
             type="range"
@@ -133,12 +138,12 @@ function ImageProcessor() {
             className="w-full accent-primary-500"
           />
           <div className="flex justify-between text-xs text-dark-600 mt-1">
-            <span>Protection maximale</span>
-            <span>Qualité maximale</span>
+            <span>{i.maxProtection}</span>
+            <span>{i.maxQuality}</span>
           </div>
         </div>
         <div className="mt-4">
-          <label className="text-sm text-dark-400 block mb-1">Format de sortie</label>
+          <label className="text-sm text-dark-400 block mb-1">{i.outputFormat}</label>
           <select
             value={options.format}
             onChange={(e) => setOptions({ ...options, format: e.target.value as "jpeg" | "png" | "webp" })}
@@ -151,7 +156,6 @@ function ImageProcessor() {
         </div>
       </div>
 
-      {/* Upload zone */}
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
@@ -175,16 +179,14 @@ function ImageProcessor() {
             <svg className="w-12 h-12 mx-auto text-dark-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-dark-400 mb-1">Glissez une image ici ou cliquez pour parcourir</p>
-            <p className="text-xs text-dark-600">PNG, JPG, WebP — Max 20 MB</p>
+            <p className="text-dark-400 mb-1">{i.dropzone}</p>
+            <p className="text-xs text-dark-600">{i.dropzoneSub}</p>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
       )}
 
       {file && !result && (
@@ -199,10 +201,10 @@ function ImageProcessor() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Traitement en cours...
+              {i.processing}
             </span>
           ) : (
-            "Nettoyer l'image"
+            i.cleanBtn
           )}
         </button>
       )}
@@ -213,22 +215,14 @@ function ImageProcessor() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-medium">Image nettoyée avec succès</span>
+            <span className="font-medium">{i.success}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-xs text-dark-400">
-            <div>
-              <span className="text-dark-500">Signatures IA :</span> Effacées
-            </div>
-            <div>
-              <span className="text-dark-500">Empreinte numérique :</span> Reconstruite
-            </div>
-            <div>
-              <span className="text-dark-500">Authenticité :</span> Restaurée
-            </div>
-            <div>
-              <span className="text-dark-500">Détection :</span> Neutralisée
-            </div>
+            <div><span className="text-dark-500">{i.signaturesErased}</span> {i.signaturesVal}</div>
+            <div><span className="text-dark-500">{i.fingerprintRebuilt}</span> {i.fingerprintVal}</div>
+            <div><span className="text-dark-500">{i.authenticityRestored}</span> {i.authenticityVal}</div>
+            <div><span className="text-dark-500">{i.detectionNeutralized}</span> {i.detectionVal}</div>
           </div>
 
           <a
@@ -236,18 +230,14 @@ function ImageProcessor() {
             download={`iakiller_${Date.now()}.${options.format}`}
             className="block w-full py-3 rounded-xl gradient-bg text-white font-semibold text-center hover:opacity-90 transition-opacity"
           >
-            Télécharger l&apos;image nettoyée
+            {i.download}
           </a>
 
           <button
-            onClick={() => {
-              setFile(null);
-              setPreview(null);
-              setResult(null);
-            }}
+            onClick={() => { setFile(null); setPreview(null); setResult(null); }}
             className="w-full py-2 text-sm text-dark-400 hover:text-white transition-colors"
           >
-            Traiter une autre image
+            {i.processAnother}
           </button>
         </div>
       )}
@@ -256,6 +246,9 @@ function ImageProcessor() {
 }
 
 function TextProcessor() {
+  const { locale } = useLocale();
+  const i = ts("text", locale);
+
   const [text, setText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ processed: string; changes: string[] } | null>(null);
@@ -281,36 +274,34 @@ function TextProcessor() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors du traitement");
+        throw new Error(data.error || "Error");
       }
 
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setProcessing(false);
     }
   };
 
   const copyToClipboard = () => {
-    if (result) {
-      navigator.clipboard.writeText(result.processed);
-    }
+    if (result) navigator.clipboard.writeText(result.processed);
   };
 
   return (
     <div className="space-y-6">
       <div className="card p-6">
-        <h2 className="text-lg font-semibold mb-4">Configuration</h2>
+        <h2 className="text-lg font-semibold mb-4">{i.config}</h2>
         <div>
-          <label className="text-sm text-dark-400 block mb-1">Langue du texte</label>
+          <label className="text-sm text-dark-400 block mb-1">{i.textLanguage}</label>
           <select
             value={options.language}
             onChange={(e) => setOptions({ ...options, language: e.target.value as "fr" | "en" | "auto" })}
             className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-3 py-1.5 text-sm"
           >
-            <option value="auto">Auto-détection</option>
+            <option value="auto">{i.autoDetect}</option>
             <option value="fr">Français</option>
             <option value="en">English</option>
           </select>
@@ -318,26 +309,19 @@ function TextProcessor() {
       </div>
 
       <div className="card p-6">
-        <label className="text-sm text-dark-400 block mb-2">
-          Collez votre texte généré par IA
-        </label>
+        <label className="text-sm text-dark-400 block mb-2">{i.pasteLabel}</label>
         <textarea
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setResult(null);
-          }}
-          placeholder="Collez ici le texte à traiter..."
+          onChange={(e) => { setText(e.target.value); setResult(null); }}
+          placeholder={i.placeholder}
           rows={8}
           className="w-full bg-dark-900 border border-[#1e1e4a] rounded-lg px-4 py-3 text-sm resize-y focus:border-primary-500/50 focus:outline-none transition-colors"
         />
-        <div className="text-xs text-dark-600 mt-1">{text.length} caractères</div>
+        <div className="text-xs text-dark-600 mt-1">{text.length} {i.characters}</div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
       )}
 
       {text.trim() && !result && (
@@ -352,10 +336,10 @@ function TextProcessor() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Traitement en cours...
+              {i.processing}
             </span>
           ) : (
-            "Nettoyer le texte"
+            i.cleanBtn
           )}
         </button>
       )}
@@ -367,17 +351,17 @@ function TextProcessor() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="font-medium">Texte nettoyé</span>
+              <span className="font-medium">{i.success}</span>
             </div>
             <button onClick={copyToClipboard} className="text-sm text-primary-400 hover:text-primary-300">
-              Copier
+              {i.copy}
             </button>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {result.changes.map((change, i) => (
+            {result.changes.map((change, idx) => (
               <span
-                key={i}
+                key={idx}
                 className="px-2 py-1 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-300 text-xs"
               >
                 {change}
@@ -393,7 +377,7 @@ function TextProcessor() {
             onClick={() => setResult(null)}
             className="w-full py-2 text-sm text-dark-400 hover:text-white transition-colors"
           >
-            Traiter un autre texte
+            {i.processAnother}
           </button>
         </div>
       )}
@@ -402,6 +386,9 @@ function TextProcessor() {
 }
 
 function VideoProcessor() {
+  const { locale } = useLocale();
+  const i = ts("video", locale);
+
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -410,17 +397,17 @@ function VideoProcessor() {
 
   const handleFile = useCallback((f: File) => {
     if (!f.type.startsWith("video/")) {
-      setError("Veuillez sélectionner une vidéo");
+      setError(i.selectVideo);
       return;
     }
     if (f.size > 100 * 1024 * 1024) {
-      setError("La vidéo ne doit pas dépasser 100 MB");
+      setError(i.tooLarge);
       return;
     }
     setFile(f);
     setResult(null);
     setError(null);
-  }, []);
+  }, [i.selectVideo, i.tooLarge]);
 
   const processVideo = async () => {
     if (!file) return;
@@ -438,14 +425,14 @@ function VideoProcessor() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors du traitement");
+        throw new Error(data.error || "Error");
       }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setResult(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setProcessing(false);
     }
@@ -454,11 +441,7 @@ function VideoProcessor() {
   return (
     <div className="space-y-6">
       <div
-        onDrop={(e) => {
-          e.preventDefault();
-          const f = e.dataTransfer.files[0];
-          if (f) handleFile(f);
-        }}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => fileInputRef.current?.click()}
         className="dropzone card p-12 text-center cursor-pointer"
@@ -483,16 +466,14 @@ function VideoProcessor() {
             <svg className="w-12 h-12 mx-auto text-dark-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <p className="text-dark-400 mb-1">Glissez une vidéo ici ou cliquez pour parcourir</p>
-            <p className="text-xs text-dark-600">MP4, MOV, AVI — Max 100 MB</p>
+            <p className="text-dark-400 mb-1">{i.dropzone}</p>
+            <p className="text-xs text-dark-600">{i.dropzoneSub}</p>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
       )}
 
       {file && !result && (
@@ -507,10 +488,10 @@ function VideoProcessor() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Traitement en cours (peut prendre quelques minutes)...
+              {i.processing}
             </span>
           ) : (
-            "Nettoyer la vidéo"
+            i.cleanBtn
           )}
         </button>
       )}
@@ -521,12 +502,12 @@ function VideoProcessor() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-medium">Vidéo nettoyée avec succès</span>
+            <span className="font-medium">{i.success}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-xs text-dark-400">
-            <div><span className="text-dark-500">Signatures IA :</span> Effacées</div>
-            <div><span className="text-dark-500">Fichier :</span> Reconstruit</div>
+            <div><span className="text-dark-500">{i.signaturesErased}</span> {i.signaturesVal}</div>
+            <div><span className="text-dark-500">{i.fileRebuilt}</span> {i.fileVal}</div>
           </div>
 
           <a
@@ -534,17 +515,14 @@ function VideoProcessor() {
             download={`iakiller_${Date.now()}.mp4`}
             className="block w-full py-3 rounded-xl gradient-bg text-white font-semibold text-center hover:opacity-90 transition-opacity"
           >
-            Télécharger la vidéo nettoyée
+            {i.download}
           </a>
 
           <button
-            onClick={() => {
-              setFile(null);
-              setResult(null);
-            }}
+            onClick={() => { setFile(null); setResult(null); }}
             className="w-full py-2 text-sm text-dark-400 hover:text-white transition-colors"
           >
-            Traiter une autre vidéo
+            {i.processAnother}
           </button>
         </div>
       )}

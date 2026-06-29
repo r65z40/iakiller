@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { LanguageProvider } from "@/components/LanguageProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IAKiller — Rendez votre contenu IA indétectable",
+  title: "IAKiller — Make your AI content undetectable",
   description:
-    "Supprimez les traces IA de vos images, textes et vidéos. Nettoyage des métadonnées, modification subtile du contenu. Gratuit et instantané.",
+    "Remove AI traces from your images, texts and videos. Our proprietary algorithm erases all invisible signatures. Free and instant.",
 };
 
 export default function RootLayout({
@@ -13,8 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en">
+      <body className="min-h-screen antialiased">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }
