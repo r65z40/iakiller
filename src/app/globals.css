@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #050510;
+  --bg-card: #0f0f23;
+  --bg-card-hover: #16163a;
+  --border: #1e1e4a;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #a855f7;
+  --accent-hover: #c084fc;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #a855f7, #6366f1, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+}
+
+.gradient-border {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #a855f7, #6366f1, #ec4899);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+}
+
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: #a855f744;
+}
+
+.glow {
+  box-shadow: 0 0 40px rgba(168, 85, 247, 0.15);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+.tab-active {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: white;
+}
+
+.tab-inactive {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.tab-inactive:hover {
+  border-color: #a855f744;
+  color: var(--text);
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  transition: all 0.3s;
+}
+
+.dropzone:hover,
+.dropzone.active {
+  border-color: var(--accent);
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, #a855f7, #6366f1, #ec4899);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.stat-card {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-card-hover));
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.chart-bar {
+  background: linear-gradient(to top, #a855f7, #6366f1);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
