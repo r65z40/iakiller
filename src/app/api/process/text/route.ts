@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processText } from "@/lib/processors/text";
-import { addProcessing, upsertSession } from "@/lib/db";
+import { addProcessing, upsertSession, getDailyProcessingCount, getSessionPremiumStatus } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
   try {
+    const sessionId = request.cookies.get("session_id")?.value || uuidv4();
+    const status = getSessionPremiumStatus(sessionId);
+    const dailyCount = getDailyProcessingCount(sessionId);
+
+    if (dailyCount >= status.dailyLimit) {
+      return NextResponse.json(
+        { error: "LIMIT_REACHED", limit: status.dailyLimit, isPremium: status.isPremium },
+        { status: 429 }
+      );
+    }
+
     const { text, options } = await request.json();
 
     if (!text || typeof text !== "string") {
@@ -20,7 +31,6 @@ export async function POST(request: NextRequest) {
 
     const result = processText(text, options);
 
-    const sessionId = request.cookies.get("session_id")?.value || uuidv4();
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
@@ -36,12 +46,13 @@ export async function POST(request: NextRequest) {
 
     upsertSession(sessionId, ip, userAgent);
 
+    const isHttps = request.headers.get("x-forwarded-proto") === "https" || request.url.startsWith("https");
     const response = NextResponse.json(result);
 
     if (!request.cookies.get("session_id")) {
       response.cookies.set("session_id", sessionId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isHttps,
         sameSite: "lax",
         maxAge: 365 * 24 * 60 * 60,
       });

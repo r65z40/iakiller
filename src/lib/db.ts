@@ -6,8 +6,8 @@ const DATA_DIR = path.join(process.cwd(), "data");
 interface Ad {
   id: string;
   name: string;
-  type: "banner" | "sidebar" | "interstitial" | "native";
-  position: "header" | "sidebar" | "content" | "footer";
+  type: "banner" | "sidebar" | "interstitial" | "native" | "popup";
+  position: "header" | "sidebar" | "content" | "footer" | "popup";
   content: string;
   imageUrl?: string;
   targetUrl?: string;
@@ -37,6 +37,24 @@ interface Session {
   ip?: string;
   userAgent?: string;
   country?: string;
+  premiumKey?: string;
+}
+
+interface PremiumKey {
+  id: string;
+  key: string;
+  label: string;
+  dailyLimit: number;
+  noAds: boolean;
+  active: boolean;
+  usedBy: string[];
+  createdAt: string;
+  expiresAt?: string;
+}
+
+interface SiteSettings {
+  dailyLimitFree: number;
+  popupAdEnabled: boolean;
 }
 
 interface AdminUser {
@@ -51,6 +69,8 @@ interface Database {
   processings: Processing[];
   sessions: Session[];
   admins: AdminUser[];
+  premiumKeys: PremiumKey[];
+  settings: SiteSettings;
 }
 
 function ensureDataDir() {
@@ -69,6 +89,11 @@ function defaultDb(): Database {
     processings: [],
     sessions: [],
     admins: [],
+    premiumKeys: [],
+    settings: {
+      dailyLimitFree: 10,
+      popupAdEnabled: true,
+    },
   };
 }
 
@@ -248,4 +273,82 @@ export function createAdmin(admin: AdminUser): void {
   writeDb(db);
 }
 
-export type { Ad, Processing, Session, AdminUser, Database };
+// Daily limit tracking
+export function getDailyProcessingCount(sessionId: string): number {
+  const db = readDb();
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  return db.processings.filter(
+    (p) => p.sessionId === sessionId && p.processedAt >= todayStart
+  ).length;
+}
+
+export function getSettings(): SiteSettings {
+  const db = readDb();
+  return db.settings || { dailyLimitFree: 10, popupAdEnabled: true };
+}
+
+export function updateSettings(updates: Partial<SiteSettings>): SiteSettings {
+  const db = readDb();
+  db.settings = { ...db.settings, ...updates };
+  writeDb(db);
+  return db.settings;
+}
+
+// Premium keys
+export function getPremiumKeys(): PremiumKey[] {
+  return readDb().premiumKeys || [];
+}
+
+export function createPremiumKey(key: PremiumKey): PremiumKey {
+  const db = readDb();
+  if (!db.premiumKeys) db.premiumKeys = [];
+  db.premiumKeys.push(key);
+  writeDb(db);
+  return key;
+}
+
+export function getPremiumKey(key: string): PremiumKey | undefined {
+  const db = readDb();
+  return (db.premiumKeys || []).find((k) => k.key === key && k.active);
+}
+
+export function deletePremiumKey(id: string): boolean {
+  const db = readDb();
+  const idx = (db.premiumKeys || []).findIndex((k) => k.id === id);
+  if (idx === -1) return false;
+  db.premiumKeys.splice(idx, 1);
+  writeDb(db);
+  return true;
+}
+
+export function activatePremiumForSession(sessionId: string, premiumKeyStr: string): boolean {
+  const db = readDb();
+  const key = (db.premiumKeys || []).find((k) => k.key === premiumKeyStr && k.active);
+  if (!key) return false;
+  if (key.expiresAt && new Date(key.expiresAt) < new Date()) return false;
+  const session = db.sessions.find((s) => s.id === sessionId);
+  if (session) {
+    session.premiumKey = premiumKeyStr;
+  }
+  if (!key.usedBy.includes(sessionId)) {
+    key.usedBy.push(sessionId);
+  }
+  writeDb(db);
+  return true;
+}
+
+export function getSessionPremiumStatus(sessionId: string): { isPremium: boolean; dailyLimit: number; noAds: boolean } {
+  const db = readDb();
+  const session = db.sessions.find((s) => s.id === sessionId);
+  if (!session?.premiumKey) {
+    return { isPremium: false, dailyLimit: db.settings?.dailyLimitFree || 10, noAds: false };
+  }
+  const key = (db.premiumKeys || []).find((k) => k.key === session.premiumKey && k.active);
+  if (!key || (key.expiresAt && new Date(key.expiresAt) < new Date())) {
+    return { isPremium: false, dailyLimit: db.settings?.dailyLimitFree || 10, noAds: false };
+  }
+  return { isPremium: true, dailyLimit: key.dailyLimit, noAds: key.noAds };
+}
+
+export type { Ad, Processing, Session, AdminUser, Database, PremiumKey, SiteSettings };

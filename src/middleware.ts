@@ -5,7 +5,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "iakiller-secret-change-me"
 );
 
-const PROTECTED_PATHS = ["/admin/ads", "/admin/users", "/admin/stats"];
+const PROTECTED_PATHS = ["/admin/ads", "/admin/users", "/admin/stats", "/admin/settings", "/admin/premium"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

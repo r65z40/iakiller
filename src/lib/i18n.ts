@@ -198,6 +198,32 @@ const translations = {
     download: { en: "Download cleaned video", fr: "Télécharger la vidéo nettoyée" },
     processAnother: { en: "Process another video", fr: "Traiter une autre vidéo" },
   },
+  limits: {
+    remaining: { en: "processings remaining today", fr: "traitements restants aujourd'hui" },
+    unlimited: { en: "Unlimited", fr: "Illimité" },
+    limitReached: { en: "Daily limit reached", fr: "Limite journalière atteinte" },
+    limitDesc: {
+      en: "You have used all your free processings for today. Come back tomorrow or activate a premium key.",
+      fr: "Vous avez utilisé tous vos traitements gratuits pour aujourd'hui. Revenez demain ou activez une clé premium.",
+    },
+    premiumBadge: { en: "Premium", fr: "Premium" },
+    freeBadge: { en: "Free", fr: "Gratuit" },
+    activateKey: { en: "Activate premium key", fr: "Activer une clé premium" },
+    keyPlaceholder: { en: "XXXX-XXXX-XXXX-XXXX", fr: "XXXX-XXXX-XXXX-XXXX" },
+    activate: { en: "Activate", fr: "Activer" },
+    invalidKey: { en: "Invalid or expired key", fr: "Clé invalide ou expirée" },
+    activated: { en: "Premium activated!", fr: "Premium activé !" },
+    noAds: { en: "No ads", fr: "Sans publicité" },
+    moreProcessings: { en: "More processings per day", fr: "Plus de traitements par jour" },
+    premiumFeatures: { en: "Premium advantages", fr: "Avantages premium" },
+  },
+
+  popup: {
+    close: { en: "Close", fr: "Fermer" },
+    ad: { en: "Advertisement", fr: "Publicité" },
+    skipIn: { en: "Skip in", fr: "Passer dans" },
+    skip: { en: "Skip", fr: "Passer" },
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

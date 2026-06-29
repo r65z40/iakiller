@@ -180,6 +180,7 @@ export default function AdsPage() {
                 <option value="sidebar">Sidebar</option>
                 <option value="interstitial">Interstitiel</option>
                 <option value="native">Natif</option>
+                <option value="popup">Popup</option>
               </select>
             </div>
             <div>
@@ -193,6 +194,7 @@ export default function AdsPage() {
                 <option value="content">Dans le contenu</option>
                 <option value="sidebar">Barre latérale</option>
                 <option value="footer">Bas de page</option>
+                <option value="popup">Popup (au traitement)</option>
               </select>
             </div>
             <div>
