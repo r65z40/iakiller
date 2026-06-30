@@ -6,6 +6,7 @@ interface ImageProcessOptions {
   microCrop: boolean;
   quality: number;
   format: "jpeg" | "png" | "webp";
+  intensity: number;
 }
 
 const defaultOptions: ImageProcessOptions = {
@@ -14,6 +15,7 @@ const defaultOptions: ImageProcessOptions = {
   microCrop: true,
   quality: 88,
   format: "jpeg",
+  intensity: 75,
 };
 
 export async function processImage(
@@ -21,6 +23,7 @@ export async function processImage(
   options: Partial<ImageProcessOptions> = {}
 ): Promise<{ buffer: Buffer; format: string; width: number; height: number }> {
   const opts = { ...defaultOptions, ...options };
+  const intensity = Math.max(0, Math.min(100, opts.intensity)) / 100;
 
   const metadata = await sharp(inputBuffer).metadata();
   const width = metadata.width || 1024;
@@ -28,58 +31,89 @@ export async function processImage(
 
   let pipeline = sharp(inputBuffer, { failOn: "none" })
     .rotate()
-    .removeAlpha();
+    .withMetadata({});
+
+  pipeline = pipeline.removeAlpha();
+
+  const scaleDown = 1 - (0.005 + Math.random() * 0.01) * intensity;
+  const newW = Math.round(width * scaleDown);
+  const newH = Math.round(height * scaleDown);
+  pipeline = pipeline.resize(newW, newH, { kernel: "lanczos3" });
+  pipeline = pipeline.resize(width, height, { kernel: "lanczos3" });
 
   if (opts.microCrop) {
-    const cropPx = Math.max(1, Math.floor(Math.random() * 3) + 1);
+    const cropPx = Math.max(1, Math.floor((Math.random() * 4 + 2) * intensity));
+    const cropW = Math.max(1, width - cropPx * 2);
+    const cropH = Math.max(1, height - cropPx * 2);
     pipeline = pipeline.extract({
       left: cropPx,
       top: cropPx,
-      width: Math.max(1, width - cropPx * 2),
-      height: Math.max(1, height - cropPx * 2),
+      width: cropW,
+      height: cropH,
     });
+    pipeline = pipeline.resize(width, height, { kernel: "lanczos3" });
   }
 
   if (opts.colorShift) {
-    const brightness = 1 + (Math.random() * 0.04 - 0.02);
-    const saturation = 1 + (Math.random() * 0.06 - 0.03);
-    pipeline = pipeline.modulate({ brightness, saturation });
+    const brightness = 1 + (Math.random() * 0.08 - 0.04) * intensity;
+    const saturation = 1 + (Math.random() * 0.12 - 0.06) * intensity;
+    const hue = Math.round((Math.random() * 6 - 3) * intensity);
+    pipeline = pipeline.modulate({ brightness, saturation, hue });
+  }
+
+  const blurSigma = 0.3 + Math.random() * 0.5 * intensity;
+  pipeline = pipeline.blur(blurSigma);
+
+  const sharpenSigma = 0.5 + Math.random() * 0.8 * intensity;
+  pipeline = pipeline.sharpen({ sigma: sharpenSigma });
+
+  if (Math.random() < 0.5 * intensity) {
+    const gamma = 0.95 + Math.random() * 0.1;
+    pipeline = pipeline.gamma(gamma);
   }
 
   if (opts.addNoise) {
-    const noiseBuffer = await generateNoiseOverlay(
-      opts.microCrop ? width - 6 : width,
-      opts.microCrop ? height - 6 : height
-    );
+    const noiseStrength = Math.max(3, Math.floor(8 * intensity));
+    const noiseBuffer = await generateNoiseOverlay(width, height, noiseStrength);
     pipeline = pipeline.composite([
       {
         input: noiseBuffer,
-        blend: "soft-light",
+        blend: "overlay",
+        gravity: "centre",
       },
     ]);
   }
 
+  const tempBuf = await pipeline.jpeg({ quality: 75 + Math.floor(Math.random() * 10) }).toBuffer();
+  let secondPipeline = sharp(tempBuf, { failOn: "none" });
+
   let outputBuffer: Buffer;
+  const qualityJitter = Math.floor(Math.random() * 8 - 4);
 
   switch (opts.format) {
     case "png":
-      outputBuffer = await pipeline
-        .png({ compressionLevel: 6 + Math.floor(Math.random() * 3) })
+      outputBuffer = await secondPipeline
+        .png({ compressionLevel: 5 + Math.floor(Math.random() * 4) })
         .toBuffer();
       break;
     case "webp":
-      outputBuffer = await pipeline
-        .webp({ quality: opts.quality + Math.floor(Math.random() * 5 - 2) })
+      outputBuffer = await secondPipeline
+        .webp({ quality: opts.quality + qualityJitter, effort: 4 + Math.floor(Math.random() * 3) })
         .toBuffer();
       break;
     default:
-      outputBuffer = await pipeline
+      outputBuffer = await secondPipeline
         .jpeg({
-          quality: opts.quality + Math.floor(Math.random() * 5 - 2),
-          mozjpeg: true,
+          quality: opts.quality + qualityJitter,
+          mozjpeg: Math.random() > 0.5,
+          chromaSubsampling: Math.random() > 0.5 ? "4:2:0" : "4:4:4",
         })
         .toBuffer();
   }
+
+  outputBuffer = await sharp(outputBuffer)
+    .withMetadata({})
+    .toBuffer();
 
   const outputMeta = await sharp(outputBuffer).metadata();
 
@@ -93,20 +127,26 @@ export async function processImage(
 
 async function generateNoiseOverlay(
   width: number,
-  height: number
+  height: number,
+  strength: number = 5
 ): Promise<Buffer> {
   const channels = 3;
-  const pixels = width * height * channels;
+  const w = Math.max(1, width);
+  const h = Math.max(1, height);
+  const pixels = w * h * channels;
   const noise = Buffer.alloc(pixels);
 
   for (let i = 0; i < pixels; i++) {
-    noise[i] = 128 + Math.floor(Math.random() * 6 - 3);
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const gaussian = Math.sqrt(-2 * Math.log(u1 || 0.001)) * Math.cos(2 * Math.PI * u2);
+    noise[i] = Math.max(0, Math.min(255, Math.round(128 + gaussian * strength)));
   }
 
   return sharp(noise, {
     raw: {
-      width: Math.max(1, width),
-      height: Math.max(1, height),
+      width: w,
+      height: h,
       channels: channels as 3,
     },
   })

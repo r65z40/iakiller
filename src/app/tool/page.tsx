@@ -323,6 +323,7 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
     microCrop: true,
     quality: 88,
     format: "jpeg" as "jpeg" | "png" | "webp",
+    intensity: 75,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -414,7 +415,10 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
             min="60"
             max="100"
             value={options.quality}
-            onChange={(e) => setOptions({ ...options, quality: parseInt(e.target.value) })}
+            onChange={(e) => {
+              const q = parseInt(e.target.value);
+              setOptions({ ...options, quality: q, intensity: Math.round(100 - (q - 60) * (75 / 40)) });
+            }}
             className="w-full accent-primary-500"
           />
           <div className="flex justify-between text-xs text-dark-600 mt-1">
