@@ -245,61 +245,66 @@ function ImageCompare({ beforeSrc, afterSrc }: { beforeSrc: string; afterSrc: st
     setSliderPos((x / rect.width) * 100);
   }, []);
 
-  const onMouseDown = useCallback(() => { dragging.current = true; }, []);
-  const onMouseUp = useCallback(() => { dragging.current = false; }, []);
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (dragging.current) updateSlider(e.clientX);
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateSlider(e.clientX);
   }, [updateSlider]);
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    updateSlider(e.touches[0].clientX);
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    dragging.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (dragging.current) updateSlider(e.clientX);
   }, [updateSlider]);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full rounded-lg overflow-hidden cursor-col-resize select-none"
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onMouseUp}
+      className="relative w-full rounded-lg overflow-hidden cursor-col-resize select-none touch-none"
     >
-      {/* After (full width, background) */}
-      <img src={afterSrc} alt="After" className="w-full h-auto block" draggable={false} />
+      {/* After (full width, background layer) */}
+      <img src={afterSrc} alt="After" className="block w-full h-auto" draggable={false} />
 
-      {/* Before (clipped) */}
-      <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ width: `${sliderPos}%` }}
-      >
+      {/* Before (clipped via clip-path so the image stays full size) */}
+      <div className="absolute inset-0">
         <img
           src={beforeSrc}
           alt="Before"
-          className="w-full h-auto block"
-          style={{ width: containerRef.current ? `${containerRef.current.offsetWidth}px` : "100%" }}
+          className="block w-full h-full object-cover"
+          style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
           draggable={false}
         />
       </div>
 
+      {/* Invisible drag target covering the whole area */}
+      <div
+        className="absolute inset-0"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerMove={onPointerMove}
+      />
+
       {/* Slider line */}
       <div
-        className="absolute top-0 bottom-0 w-0.5 bg-white/80 shadow-lg"
+        className="absolute top-0 bottom-0 w-0.5 bg-white/80 shadow-lg pointer-events-none"
         style={{ left: `${sliderPos}%` }}
-        onMouseDown={onMouseDown}
-        onTouchStart={onMouseDown}
       >
-        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center">
-          <svg className="w-4 h-4 text-dark-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center pointer-events-none">
+          <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </div>
       </div>
 
       {/* Labels */}
-      <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm">
+      <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm pointer-events-none">
         {i.before}
       </div>
-      <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm">
+      <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm pointer-events-none">
         {i.after}
       </div>
     </div>
