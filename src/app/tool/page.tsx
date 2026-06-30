@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import AdBanner from "@/components/AdBanner";
 import AdPopup from "@/components/AdPopup";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { useToast } from "@/components/Toast";
 import { useLocale } from "@/components/LanguageProvider";
 import { ts } from "@/lib/i18n";
 
@@ -45,6 +47,7 @@ export default function ToolPage() {
   const [premiumKey, setPremiumKey] = useState("");
   const [premiumError, setPremiumError] = useState("");
   const [premiumSuccess, setPremiumSuccess] = useState(false);
+  const { toast } = useToast();
 
   const activatePremium = async () => {
     setPremiumError("");
@@ -60,6 +63,7 @@ export default function ToolPage() {
       }
       setPremiumSuccess(true);
       refreshQuota();
+      toast(limT.activated, "success");
       setTimeout(() => {
         setShowPremiumModal(false);
         setPremiumSuccess(false);
@@ -70,6 +74,8 @@ export default function ToolPage() {
     }
   };
 
+  const quotaPercent = quota ? Math.round((quota.used / quota.limit) * 100) : 0;
+
   return (
     <>
       <Navbar />
@@ -79,29 +85,39 @@ export default function ToolPage() {
         </h1>
         <p className="text-dark-400 text-center mb-6">{toolT.subtitle}</p>
 
-        {/* Quota + Premium bar */}
+        {/* Quota bar with animated progress */}
         {quota && (
-          <div className="flex items-center justify-between mb-6 card px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                quota.isPremium
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                  : "bg-dark-800 text-dark-400 border border-dark-700"
-              }`}>
-                {quota.isPremium ? limT.premiumBadge : limT.freeBadge}
-              </span>
-              <span className="text-sm text-dark-400">
-                <span className="text-white font-semibold">{quota.remaining}</span> {limT.remaining}
-              </span>
+          <div className="mb-6 card px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  quota.isPremium
+                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    : "bg-dark-800 text-dark-400 border border-dark-700"
+                }`}>
+                  {quota.isPremium ? limT.premiumBadge : limT.freeBadge}
+                </span>
+                <span className="text-sm text-dark-400">
+                  <span className="text-white font-semibold">{quota.remaining}</span> {limT.remaining}
+                </span>
+              </div>
+              {!quota.isPremium && (
+                <button
+                  onClick={() => setShowPremiumModal(true)}
+                  className="text-xs text-primary-400 hover:text-primary-300 font-medium"
+                >
+                  {limT.activateKey}
+                </button>
+              )}
             </div>
-            {!quota.isPremium && (
-              <button
-                onClick={() => setShowPremiumModal(true)}
-                className="text-xs text-primary-400 hover:text-primary-300 font-medium"
-              >
-                {limT.activateKey}
-              </button>
-            )}
+            <div className="w-full h-1.5 bg-dark-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ease-out ${
+                  quotaPercent > 80 ? "bg-red-500" : quotaPercent > 50 ? "bg-amber-500" : "bg-primary-500"
+                }`}
+                style={{ width: `${quotaPercent}%` }}
+              />
+            </div>
           </div>
         )}
 
@@ -121,9 +137,11 @@ export default function ToolPage() {
 
         {!(quota?.noAds) && <AdBanner position="header" />}
 
-        {activeTab === "image" && <ImageProcessor quota={quota} onProcessed={refreshQuota} />}
-        {activeTab === "text" && <TextProcessor quota={quota} onProcessed={refreshQuota} />}
-        {activeTab === "video" && <VideoProcessor quota={quota} onProcessed={refreshQuota} />}
+        <ErrorBoundary>
+          {activeTab === "image" && <ImageProcessor quota={quota} onProcessed={refreshQuota} />}
+          {activeTab === "text" && <TextProcessor quota={quota} onProcessed={refreshQuota} />}
+          {activeTab === "video" && <VideoProcessor quota={quota} onProcessed={refreshQuota} />}
+        </ErrorBoundary>
 
         {!(quota?.noAds) && <AdBanner position="footer" />}
 
@@ -212,9 +230,86 @@ function LimitReachedBanner() {
   );
 }
 
+/* ──── Image Before/After Comparison ──── */
+function ImageCompare({ beforeSrc, afterSrc }: { beforeSrc: string; afterSrc: string }) {
+  const { locale } = useLocale();
+  const i = ts("image", locale);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sliderPos, setSliderPos] = useState(50);
+  const dragging = useRef(false);
+
+  const updateSlider = useCallback((clientX: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    setSliderPos((x / rect.width) * 100);
+  }, []);
+
+  const onMouseDown = useCallback(() => { dragging.current = true; }, []);
+  const onMouseUp = useCallback(() => { dragging.current = false; }, []);
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (dragging.current) updateSlider(e.clientX);
+  }, [updateSlider]);
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    updateSlider(e.touches[0].clientX);
+  }, [updateSlider]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full rounded-lg overflow-hidden cursor-col-resize select-none"
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onMouseUp}
+    >
+      {/* After (full width, background) */}
+      <img src={afterSrc} alt="After" className="w-full h-auto block" draggable={false} />
+
+      {/* Before (clipped) */}
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{ width: `${sliderPos}%` }}
+      >
+        <img
+          src={beforeSrc}
+          alt="Before"
+          className="w-full h-auto block"
+          style={{ width: containerRef.current ? `${containerRef.current.offsetWidth}px` : "100%" }}
+          draggable={false}
+        />
+      </div>
+
+      {/* Slider line */}
+      <div
+        className="absolute top-0 bottom-0 w-0.5 bg-white/80 shadow-lg"
+        style={{ left: `${sliderPos}%` }}
+        onMouseDown={onMouseDown}
+        onTouchStart={onMouseDown}
+      >
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center">
+          <svg className="w-4 h-4 text-dark-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Labels */}
+      <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm">
+        {i.before}
+      </div>
+      <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/60 text-xs text-white/80 backdrop-blur-sm">
+        {i.after}
+      </div>
+    </div>
+  );
+}
+
 function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
   const { locale } = useLocale();
   const i = ts("image", locale);
+  const { toast } = useToast();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -274,11 +369,8 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
       });
 
       if (res.status === 429) {
-        const data = await res.json();
-        if (data.error === "LIMIT_REACHED") {
-          setError("LIMIT_REACHED");
-          return;
-        }
+        setError("LIMIT_REACHED");
+        return;
       }
 
       if (!res.ok) {
@@ -291,9 +383,12 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
       const info = JSON.parse(res.headers.get("X-Process-Info") || "{}");
       setResult({ url, info });
       onProcessed();
+      toast(i.success, "success");
     } catch (err) {
       if (error !== "LIMIT_REACHED") {
-        setError(err instanceof Error ? err.message : "Error");
+        const msg = err instanceof Error ? err.message : "Error";
+        setError(msg);
+        toast(msg, "error");
       }
     } finally {
       setProcessing(false);
@@ -403,6 +498,11 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
             <span className="font-medium">{i.success}</span>
           </div>
 
+          {/* Before / After comparison */}
+          {preview && (
+            <ImageCompare beforeSrc={preview} afterSrc={result.url} />
+          )}
+
           <div className="grid grid-cols-2 gap-4 text-xs text-dark-400">
             <div><span className="text-dark-500">{i.signaturesErased}</span> {i.signaturesVal}</div>
             <div><span className="text-dark-500">{i.fingerprintRebuilt}</span> {i.fingerprintVal}</div>
@@ -433,6 +533,7 @@ function ImageProcessor({ quota, onProcessed }: ProcessorProps) {
 function TextProcessor({ quota, onProcessed }: ProcessorProps) {
   const { locale } = useLocale();
   const i = ts("text", locale);
+  const { toast } = useToast();
 
   const [text, setText] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -476,9 +577,12 @@ function TextProcessor({ quota, onProcessed }: ProcessorProps) {
       const data = await res.json();
       setResult(data);
       onProcessed();
+      toast(i.success, "success");
     } catch (err) {
       if (error !== "LIMIT_REACHED") {
-        setError(err instanceof Error ? err.message : "Error");
+        const msg = err instanceof Error ? err.message : "Error";
+        setError(msg);
+        toast(msg, "error");
       }
     } finally {
       setProcessing(false);
@@ -486,7 +590,10 @@ function TextProcessor({ quota, onProcessed }: ProcessorProps) {
   };
 
   const copyToClipboard = () => {
-    if (result) navigator.clipboard.writeText(result.processed);
+    if (result) {
+      navigator.clipboard.writeText(result.processed);
+      toast(i.copied, "success");
+    }
   };
 
   if (error === "LIMIT_REACHED") return <LimitReachedBanner />;
@@ -556,7 +663,13 @@ function TextProcessor({ quota, onProcessed }: ProcessorProps) {
               </svg>
               <span className="font-medium">{i.success}</span>
             </div>
-            <button onClick={copyToClipboard} className="text-sm text-primary-400 hover:text-primary-300">
+            <button
+              onClick={copyToClipboard}
+              className="flex items-center gap-1.5 text-sm text-primary-400 hover:text-primary-300 px-3 py-1 rounded-lg hover:bg-primary-500/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
               {i.copy}
             </button>
           </div>
@@ -591,6 +704,7 @@ function TextProcessor({ quota, onProcessed }: ProcessorProps) {
 function VideoProcessor({ quota, onProcessed }: ProcessorProps) {
   const { locale } = useLocale();
   const i = ts("video", locale);
+  const { toast } = useToast();
 
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -685,10 +799,13 @@ function VideoProcessor({ quota, onProcessed }: ProcessorProps) {
       const url = URL.createObjectURL(blob);
       setResult(url);
       onProcessed();
+      toast(i.success, "success");
     } catch (err) {
       stopProgressSimulation();
       if (error !== "LIMIT_REACHED") {
-        setError(err instanceof Error ? err.message : "Error");
+        const msg = err instanceof Error ? err.message : "Error";
+        setError(msg);
+        toast(msg, "error");
       }
     } finally {
       setProcessing(false);

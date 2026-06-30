@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import ScrollReveal from "@/components/ScrollReveal";
 import { useLocale } from "@/components/LanguageProvider";
 import { ts } from "@/lib/i18n";
 
@@ -98,63 +99,73 @@ export default function Home() {
 
         {/* Features */}
         <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <h2 className="text-3xl font-bold text-center mb-4">
-            {feat.title}<span className="gradient-text">{feat.titleHighlight}</span>
-          </h2>
-          <p className="text-dark-400 text-center mb-12 max-w-xl mx-auto">
-            {feat.subtitle}
-          </p>
+          <ScrollReveal>
+            <h2 className="text-3xl font-bold text-center mb-4">
+              {feat.title}<span className="gradient-text">{feat.titleHighlight}</span>
+            </h2>
+            <p className="text-dark-400 text-center mb-12 max-w-xl mx-auto">
+              {feat.subtitle}
+            </p>
+          </ScrollReveal>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <div key={feature.title} className="card p-6 group">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary-600/10">
-                  <svg className="w-6 h-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={feature.icon} />
-                  </svg>
+            {features.map((feature, i) => (
+              <ScrollReveal key={feature.title} delay={i * 150}>
+                <div className="card p-6 group">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-primary-600/10">
+                    <svg className="w-6 h-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={feature.icon} />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-dark-400 text-sm leading-relaxed">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-dark-400 text-sm leading-relaxed">{feature.description}</p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </section>
 
         {/* Steps */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            {locale === "en" ? "As easy as " : "Simple comme "}<span className="gradient-text">1-2-3</span>
-          </h2>
+          <ScrollReveal>
+            <h2 className="text-3xl font-bold text-center mb-12">
+              {locale === "en" ? "As easy as " : "Simple comme "}<span className="gradient-text">1-2-3</span>
+            </h2>
+          </ScrollReveal>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step) => (
-              <div key={step.num} className="text-center">
-                <div className="text-5xl font-bold gradient-text mb-4">{step.num}</div>
-                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-dark-400 text-sm">{step.desc}</p>
-              </div>
+            {steps.map((step, i) => (
+              <ScrollReveal key={step.num} delay={i * 150}>
+                <div className="text-center">
+                  <div className="text-5xl font-bold gradient-text mb-4">{step.num}</div>
+                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                  <p className="text-dark-400 text-sm">{step.desc}</p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </section>
 
         {/* CTA */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="card p-12 text-center glow relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-900/20 via-transparent to-primary-900/20" />
-            <div className="relative">
-              <h2 className="text-3xl font-bold mb-4">
-                {ctaT.title}<span className="gradient-text">{ctaT.titleHighlight}</span>?
-              </h2>
-              <p className="text-dark-400 mb-8 max-w-md mx-auto">{ctaT.subtitle}</p>
-              <Link
-                href="/tool"
-                className="inline-block px-8 py-3.5 rounded-xl gradient-bg text-white font-semibold text-lg hover:opacity-90 transition-opacity"
-              >
-                {ctaT.button}
-              </Link>
+        <ScrollReveal>
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="card p-12 text-center glow relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-900/20 via-transparent to-primary-900/20" />
+              <div className="relative">
+                <h2 className="text-3xl font-bold mb-4">
+                  {ctaT.title}<span className="gradient-text">{ctaT.titleHighlight}</span>?
+                </h2>
+                <p className="text-dark-400 mb-8 max-w-md mx-auto">{ctaT.subtitle}</p>
+                <Link
+                  href="/tool"
+                  className="inline-block px-8 py-3.5 rounded-xl gradient-bg text-white font-semibold text-lg hover:opacity-90 transition-opacity"
+                >
+                  {ctaT.button}
+                </Link>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         {/* Footer */}
         <footer className="border-t border-[#1e1e4a] py-8">

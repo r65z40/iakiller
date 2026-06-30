@@ -158,6 +158,8 @@ const translations = {
     detectionVal: { en: "Neutralized", fr: "Neutralisée" },
     download: { en: "Download cleaned image", fr: "Télécharger l'image nettoyée" },
     processAnother: { en: "Process another image", fr: "Traiter une autre image" },
+    before: { en: "Before", fr: "Avant" },
+    after: { en: "After", fr: "Après" },
   },
 
   text: {
@@ -171,6 +173,7 @@ const translations = {
     cleanBtn: { en: "Clean text", fr: "Nettoyer le texte" },
     success: { en: "Text cleaned", fr: "Texte nettoyé" },
     copy: { en: "Copy", fr: "Copier" },
+    copied: { en: "Copied!", fr: "Copié !" },
     processAnother: { en: "Process another text", fr: "Traiter un autre texte" },
   },
 

@@ -122,3 +122,35 @@ body {
   border-radius: 4px 4px 0 0;
   transition: height 0.3s ease;
 }
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.3s ease-out;
+}
+
+.image-compare-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.image-compare-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 4px;
+  height: 100%;
+  background: #a855f7;
+  cursor: col-resize;
+  border: none;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
