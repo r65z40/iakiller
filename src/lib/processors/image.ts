@@ -29,140 +29,154 @@ export async function processImage(
   const origW = metadata.width || 1024;
   const origH = metadata.height || 1024;
 
-  // Step 1: Strip ALL metadata, remove alpha
+  // Step 1: Strip ALL metadata, remove alpha, force 3 channels sRGB
   let buf = await sharp(inputBuffer, { failOn: "none" })
     .rotate()
     .removeAlpha()
+    .toColorspace("srgb")
+    .jpeg({ quality: 95 })
     .toBuffer();
 
-  // Step 2: Aggressive resize cycle — downscale significantly then upscale
-  // This destroys pixel-level AI fingerprints by forcing interpolation
-  const scale1 = 1 - (0.03 + Math.random() * 0.05) * intensity;
-  const w1 = Math.max(16, Math.round(origW * scale1));
-  const h1 = Math.max(16, Math.round(origH * scale1));
-  buf = await sharp(buf).resize(w1, h1, { kernel: "cubic" }).toBuffer();
-  buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+  // Step 2: Resize cycle — downscale then upscale to break pixel-level patterns
+  try {
+    const scale1 = 1 - (0.03 + Math.random() * 0.05) * intensity;
+    const w1 = Math.max(16, Math.round(origW * scale1));
+    const h1 = Math.max(16, Math.round(origH * scale1));
+    buf = await sharp(buf).resize(w1, h1, { kernel: "cubic" }).toBuffer();
+    buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+  } catch { /* skip */ }
 
-  // Step 3: Second resize cycle with different kernel to add more interpolation artifacts
-  const scale2 = 1 + (0.02 + Math.random() * 0.03) * intensity;
-  const w2 = Math.max(16, Math.round(origW * scale2));
-  const h2 = Math.max(16, Math.round(origH * scale2));
-  buf = await sharp(buf).resize(w2, h2, { kernel: "lanczos2" }).toBuffer();
-  buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+  // Step 3: Second resize cycle with different kernel
+  try {
+    const scale2 = 1 + (0.02 + Math.random() * 0.03) * intensity;
+    const w2 = Math.max(16, Math.round(origW * scale2));
+    const h2 = Math.max(16, Math.round(origH * scale2));
+    buf = await sharp(buf).resize(w2, h2, { kernel: "lanczos2" }).toBuffer();
+    buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+  } catch { /* skip */ }
 
   // Step 4: Micro crop + resize back
   if (opts.microCrop) {
-    const cropPx = Math.max(2, Math.floor((Math.random() * 6 + 3) * intensity));
-    const cropW = Math.max(16, origW - cropPx * 2);
-    const cropH = Math.max(16, origH - cropPx * 2);
-    buf = await sharp(buf)
-      .extract({ left: cropPx, top: cropPx, width: cropW, height: cropH })
-      .toBuffer();
-    buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+    try {
+      const meta = await sharp(buf).metadata();
+      const cw = meta.width || origW;
+      const ch = meta.height || origH;
+      const cropPx = Math.max(2, Math.floor((Math.random() * 6 + 3) * intensity));
+      const cropW = Math.max(16, cw - cropPx * 2);
+      const cropH = Math.max(16, ch - cropPx * 2);
+      buf = await sharp(buf)
+        .extract({ left: cropPx, top: cropPx, width: cropW, height: cropH })
+        .toBuffer();
+      buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
+    } catch { /* skip */ }
   }
 
-  // Step 5: Strong color manipulation
+  // Step 5: Color shifts
   if (opts.colorShift) {
-    const brightness = 1 + (Math.random() * 0.14 - 0.07) * intensity;
-    const saturation = 1 + (Math.random() * 0.20 - 0.10) * intensity;
-    const hue = Math.round((Math.random() * 10 - 5) * intensity);
-    buf = await sharp(buf).modulate({ brightness, saturation, hue }).toBuffer();
+    try {
+      const brightness = 1 + (Math.random() * 0.14 - 0.07) * intensity;
+      const saturation = 1 + (Math.random() * 0.20 - 0.10) * intensity;
+      const hue = Math.round((Math.random() * 10 - 5) * intensity);
+      buf = await sharp(buf).modulate({ brightness, saturation, hue }).toBuffer();
+    } catch { /* skip */ }
   }
 
-  // Step 6: Aggressive blur + sharpen cycle (alters frequency domain heavily)
-  const blurSigma = Math.max(0.3, 0.5 + Math.random() * 1.0 * intensity);
-  buf = await sharp(buf).blur(blurSigma).toBuffer();
+  // Step 6: Blur then sharpen to alter frequency domain
+  try {
+    const blurSigma = Math.max(0.3, 0.5 + Math.random() * 1.0 * intensity);
+    buf = await sharp(buf).blur(blurSigma).toBuffer();
+    const sSigma = 0.8 + Math.random() * 1.2 * intensity;
+    const sFlat = 0.5 + Math.random() * 1.0 * intensity;
+    const sJagged = 0.3 + Math.random() * 0.8 * intensity;
+    buf = await sharp(buf).sharpen(sSigma, sFlat, sJagged).toBuffer();
+  } catch { /* skip */ }
 
-  const sharpenSigma = 0.8 + Math.random() * 1.2 * intensity;
-  const sharpenFlat = 0.5 + Math.random() * 1.0 * intensity;
-  const sharpenJagged = 0.3 + Math.random() * 0.8 * intensity;
-  buf = await sharp(buf).sharpen(sharpenSigma, sharpenFlat, sharpenJagged).toBuffer();
-
-  // Step 7: Second blur+sharpen pass for max intensity
+  // Step 7: Second blur+sharpen pass for high intensity
   if (intensity > 0.5) {
-    const blur2 = Math.max(0.3, 0.3 + Math.random() * 0.6 * intensity);
-    buf = await sharp(buf).blur(blur2).toBuffer();
-    buf = await sharp(buf).sharpen(0.6 + Math.random() * 0.5).toBuffer();
+    try {
+      buf = await sharp(buf).blur(Math.max(0.3, 0.3 + Math.random() * 0.6 * intensity)).toBuffer();
+      buf = await sharp(buf).sharpen(0.6 + Math.random() * 0.5).toBuffer();
+    } catch { /* skip */ }
   }
 
   // Step 8: Gamma correction
-  const gamma = 0.90 + Math.random() * 0.20;
-  buf = await sharp(buf).gamma(gamma).toBuffer();
+  try {
+    const gamma = 0.90 + Math.random() * 0.20;
+    buf = await sharp(buf).gamma(gamma).toBuffer();
+  } catch { /* skip */ }
 
-  // Step 9: Apply strong Gaussian noise overlay
+  // Step 9: Noise overlay
   if (opts.addNoise) {
-    const curMeta = await sharp(buf).metadata();
-    const curW = curMeta.width || origW;
-    const curH = curMeta.height || origH;
-    const noiseStrength = Math.max(5, Math.floor(15 * intensity));
-    const noiseBuffer = await generateNoiseOverlay(curW, curH, noiseStrength);
-    buf = await sharp(buf)
-      .composite([{ input: noiseBuffer, blend: "overlay" }])
-      .toBuffer();
+    try {
+      const curMeta = await sharp(buf).metadata();
+      const curW = curMeta.width || origW;
+      const curH = curMeta.height || origH;
+      const noiseStrength = Math.max(5, Math.floor(15 * intensity));
+      const noiseBuffer = await generateNoiseOverlay(curW, curH, noiseStrength);
+      buf = await sharp(buf)
+        .composite([{ input: noiseBuffer, blend: "overlay" }])
+        .toBuffer();
+    } catch { /* skip */ }
   }
 
-  // Step 10: First lossy re-encode (destroys AI compression patterns)
+  // Step 10: First lossy re-encode
   buf = await sharp(buf)
     .jpeg({ quality: 65 + Math.floor(Math.random() * 10), mozjpeg: true })
     .toBuffer();
 
-  // Step 11: Second lossy re-encode at different quality
+  // Step 11: Second lossy re-encode at different quality + chroma subsampling
   buf = await sharp(buf)
     .jpeg({
       quality: 78 + Math.floor(Math.random() * 8),
-      mozjpeg: false,
       chromaSubsampling: "4:2:0",
     })
     .toBuffer();
 
-  // Step 12: Slight rotation (non-zero, non-90) to force pixel resampling
+  // Step 12: Slight rotation to force pixel resampling
   if (intensity > 0.3) {
-    const angle = (Math.random() * 0.8 - 0.4) * intensity;
-    if (Math.abs(angle) > 0.05) {
-      buf = await sharp(buf)
-        .rotate(angle, { background: { r: 0, g: 0, b: 0 } })
-        .toBuffer();
-      // Crop back to original aspect ratio
-      const rotMeta = await sharp(buf).metadata();
-      const rw = rotMeta.width || origW;
-      const rh = rotMeta.height || origH;
-      if (rw > origW || rh > origH) {
-        const left = Math.floor((rw - origW) / 2);
-        const top = Math.floor((rh - origH) / 2);
+    try {
+      const angle = (Math.random() * 0.8 - 0.4) * intensity;
+      if (Math.abs(angle) > 0.05) {
         buf = await sharp(buf)
-          .extract({ left: Math.max(0, left), top: Math.max(0, top), width: Math.min(origW, rw), height: Math.min(origH, rh) })
+          .rotate(angle, { background: { r: 0, g: 0, b: 0 } })
           .toBuffer();
+        buf = await sharp(buf).resize(origW, origH, {
+          kernel: "lanczos3",
+          fit: "cover",
+          position: "centre",
+        }).toBuffer();
       }
-      buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
-    }
+    } catch { /* skip */ }
   }
 
-  // Step 13: Apply a second lighter noise pass
+  // Step 13: Second noise pass (lighter)
   if (opts.addNoise && intensity > 0.4) {
-    const curMeta = await sharp(buf).metadata();
-    const curW = curMeta.width || origW;
-    const curH = curMeta.height || origH;
-    const noiseBuffer2 = await generateNoiseOverlay(curW, curH, Math.max(3, Math.floor(8 * intensity)));
-    buf = await sharp(buf)
-      .composite([{ input: noiseBuffer2, blend: "soft-light" }])
-      .toBuffer();
+    try {
+      const curMeta = await sharp(buf).metadata();
+      const curW = curMeta.width || origW;
+      const curH = curMeta.height || origH;
+      const noiseBuffer2 = await generateNoiseOverlay(curW, curH, Math.max(3, Math.floor(8 * intensity)));
+      buf = await sharp(buf)
+        .composite([{ input: noiseBuffer2, blend: "soft-light" }])
+        .toBuffer();
+    } catch { /* skip */ }
   }
 
-  // Step 14: Final color tweak — subtle tint
-  const tintR = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
-  const tintG = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
-  const tintB = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
-  buf = await sharp(buf).tint({ r: tintR, g: tintG, b: tintB }).toBuffer();
+  // Step 14: Subtle color tint
+  try {
+    const tintR = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
+    const tintG = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
+    const tintB = 128 + Math.floor((Math.random() * 12 - 6) * intensity);
+    buf = await sharp(buf).tint({ r: tintR, g: tintG, b: tintB }).toBuffer();
+    buf = await sharp(buf).modulate({ brightness: 1.0, saturation: 1.05 }).toBuffer();
+  } catch { /* skip */ }
 
-  // Step 15: Undo the tint harshness with a moderate modulate
-  buf = await sharp(buf).modulate({ brightness: 1.0, saturation: 1.05 }).toBuffer();
-
-  // Step 16: Third and final lossy encode
+  // Step 15: Third lossy encode
   buf = await sharp(buf)
-    .jpeg({ quality: 70 + Math.floor(Math.random() * 12), mozjpeg: Math.random() > 0.5 })
+    .jpeg({ quality: 70 + Math.floor(Math.random() * 12) })
     .toBuffer();
 
-  // Step 17: Final output in requested format
+  // Step 16: Final output in requested format
   const qualityJitter = Math.floor(Math.random() * 6 - 3);
   let outputBuffer: Buffer;
 

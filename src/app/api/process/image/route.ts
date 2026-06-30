@@ -80,9 +80,11 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Image processing error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : "";
+    console.error("Image processing error:", msg, stack);
     return NextResponse.json(
-      { error: "Erreur lors du traitement de l'image" },
+      { error: `Erreur lors du traitement de l'image: ${msg}` },
       { status: 500 }
     );
   }
