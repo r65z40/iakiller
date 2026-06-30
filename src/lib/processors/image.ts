@@ -26,83 +26,88 @@ export async function processImage(
   const intensity = Math.max(0, Math.min(100, opts.intensity)) / 100;
 
   const metadata = await sharp(inputBuffer).metadata();
-  const width = metadata.width || 1024;
-  const height = metadata.height || 1024;
+  const origW = metadata.width || 1024;
+  const origH = metadata.height || 1024;
 
-  let pipeline = sharp(inputBuffer, { failOn: "none" })
+  // Step 1: Strip metadata + remove alpha
+  let buf = await sharp(inputBuffer, { failOn: "none" })
     .rotate()
-    .withMetadata({});
+    .removeAlpha()
+    .toBuffer();
 
-  pipeline = pipeline.removeAlpha();
-
+  // Step 2: Resize cycle — downscale then upscale to break pixel-level patterns
   const scaleDown = 1 - (0.005 + Math.random() * 0.01) * intensity;
-  const newW = Math.round(width * scaleDown);
-  const newH = Math.round(height * scaleDown);
-  pipeline = pipeline.resize(newW, newH, { kernel: "lanczos3" });
-  pipeline = pipeline.resize(width, height, { kernel: "lanczos3" });
+  const tmpW = Math.max(1, Math.round(origW * scaleDown));
+  const tmpH = Math.max(1, Math.round(origH * scaleDown));
+  buf = await sharp(buf).resize(tmpW, tmpH, { kernel: "lanczos3" }).toBuffer();
+  buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
 
+  // Step 3: Micro crop + resize back to original dimensions
   if (opts.microCrop) {
     const cropPx = Math.max(1, Math.floor((Math.random() * 4 + 2) * intensity));
-    const cropW = Math.max(1, width - cropPx * 2);
-    const cropH = Math.max(1, height - cropPx * 2);
-    pipeline = pipeline.extract({
-      left: cropPx,
-      top: cropPx,
-      width: cropW,
-      height: cropH,
-    });
-    pipeline = pipeline.resize(width, height, { kernel: "lanczos3" });
+    const cropW = Math.max(1, origW - cropPx * 2);
+    const cropH = Math.max(1, origH - cropPx * 2);
+    buf = await sharp(buf)
+      .extract({ left: cropPx, top: cropPx, width: cropW, height: cropH })
+      .toBuffer();
+    buf = await sharp(buf).resize(origW, origH, { kernel: "lanczos3" }).toBuffer();
   }
 
+  // Step 4: Color shifts
   if (opts.colorShift) {
     const brightness = 1 + (Math.random() * 0.08 - 0.04) * intensity;
     const saturation = 1 + (Math.random() * 0.12 - 0.06) * intensity;
     const hue = Math.round((Math.random() * 6 - 3) * intensity);
-    pipeline = pipeline.modulate({ brightness, saturation, hue });
+    buf = await sharp(buf).modulate({ brightness, saturation, hue }).toBuffer();
   }
 
-  const blurSigma = 0.3 + Math.random() * 0.5 * intensity;
-  pipeline = pipeline.blur(blurSigma);
+  // Step 5: Blur then sharpen to alter frequency domain
+  const blurSigma = Math.max(0.3, 0.3 + Math.random() * 0.5 * intensity);
+  buf = await sharp(buf).blur(blurSigma).toBuffer();
 
   const sharpenSigma = 0.5 + Math.random() * 0.8 * intensity;
-  pipeline = pipeline.sharpen({ sigma: sharpenSigma });
+  buf = await sharp(buf).sharpen({ sigma: sharpenSigma }).toBuffer();
 
+  // Step 6: Gamma correction
   if (Math.random() < 0.5 * intensity) {
     const gamma = 0.95 + Math.random() * 0.1;
-    pipeline = pipeline.gamma(gamma);
+    buf = await sharp(buf).gamma(gamma).toBuffer();
   }
 
+  // Step 7: Noise overlay — get actual dimensions first
   if (opts.addNoise) {
+    const curMeta = await sharp(buf).metadata();
+    const curW = curMeta.width || origW;
+    const curH = curMeta.height || origH;
     const noiseStrength = Math.max(3, Math.floor(8 * intensity));
-    const noiseBuffer = await generateNoiseOverlay(width, height, noiseStrength);
-    pipeline = pipeline.composite([
-      {
-        input: noiseBuffer,
-        blend: "overlay",
-        gravity: "centre",
-      },
-    ]);
+    const noiseBuffer = await generateNoiseOverlay(curW, curH, noiseStrength);
+    buf = await sharp(buf)
+      .composite([{ input: noiseBuffer, blend: "overlay" }])
+      .toBuffer();
   }
 
-  const tempBuf = await pipeline.jpeg({ quality: 75 + Math.floor(Math.random() * 10) }).toBuffer();
-  let secondPipeline = sharp(tempBuf, { failOn: "none" });
+  // Step 8: Double encoding — intermediate JPEG to destroy AI compression artifacts
+  buf = await sharp(buf)
+    .jpeg({ quality: 72 + Math.floor(Math.random() * 12) })
+    .toBuffer();
 
-  let outputBuffer: Buffer;
+  // Step 9: Final encoding in requested format
   const qualityJitter = Math.floor(Math.random() * 8 - 4);
+  let outputBuffer: Buffer;
 
   switch (opts.format) {
     case "png":
-      outputBuffer = await secondPipeline
+      outputBuffer = await sharp(buf)
         .png({ compressionLevel: 5 + Math.floor(Math.random() * 4) })
         .toBuffer();
       break;
     case "webp":
-      outputBuffer = await secondPipeline
+      outputBuffer = await sharp(buf)
         .webp({ quality: opts.quality + qualityJitter, effort: 4 + Math.floor(Math.random() * 3) })
         .toBuffer();
       break;
     default:
-      outputBuffer = await secondPipeline
+      outputBuffer = await sharp(buf)
         .jpeg({
           quality: opts.quality + qualityJitter,
           mozjpeg: Math.random() > 0.5,
@@ -111,17 +116,13 @@ export async function processImage(
         .toBuffer();
   }
 
-  outputBuffer = await sharp(outputBuffer)
-    .withMetadata({})
-    .toBuffer();
-
   const outputMeta = await sharp(outputBuffer).metadata();
 
   return {
     buffer: outputBuffer,
     format: opts.format,
-    width: outputMeta.width || width,
-    height: outputMeta.height || height,
+    width: outputMeta.width || origW,
+    height: outputMeta.height || origH,
   };
 }
 
@@ -144,11 +145,7 @@ async function generateNoiseOverlay(
   }
 
   return sharp(noise, {
-    raw: {
-      width: w,
-      height: h,
-      channels: channels as 3,
-    },
+    raw: { width: w, height: h, channels: channels as 3 },
   })
     .png()
     .toBuffer();
