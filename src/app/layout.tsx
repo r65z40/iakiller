@@ -1,61 +1,27 @@
-import type { Metadata } from "next";
-import { LanguageProvider } from "@/components/LanguageProvider";
-import { ToastProvider } from "@/components/Toast";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import type { Metadata, Viewport } from "next";
+import { brand, appUrl } from "@/lib/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: {
-    default: "IAKiller — Make your AI content undetectable",
-    template: "%s | IAKiller",
-  },
-  description:
-    "Remove AI traces from your images, texts and videos. Our proprietary algorithm erases all invisible signatures. Free and instant.",
-  keywords: [
-    "AI detection bypass",
-    "remove AI traces",
-    "undetectable AI content",
-    "AI image cleaner",
-    "AI text rewriter",
-    "AI video cleaner",
-    "content authenticity",
-  ],
-  authors: [{ name: "IAKiller" }],
-  creator: "IAKiller",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    alternateLocale: "fr_FR",
-    siteName: "IAKiller",
-    title: "IAKiller — Make your AI content undetectable",
-    description:
-      "Remove AI traces from your images, texts and videos. Our proprietary algorithm erases all invisible signatures. Free and instant.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "IAKiller — Make your AI content undetectable",
-    description:
-      "Remove AI traces from your images, texts and videos. Free and instant.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  metadataBase: new URL(appUrl()),
+  title: { default: `${brand.name} – ${brand.tagline}`, template: `%s – ${brand.name}` },
+  description: "Créez et partagez des cartes de visite numériques professionnelles, avec QR code, statistiques et formulaire de contact.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0047BB",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
-        <ErrorBoundary>
-          <LanguageProvider>
-            <ToastProvider>{children}</ToastProvider>
-          </LanguageProvider>
-        </ErrorBoundary>
+    <html lang="fr">
+      <body className="min-h-dvh font-sans antialiased">
+        <a href="#contenu" className="sr-only-focusable fixed left-2 top-2 z-50 rounded bg-white px-3 py-2 font-semibold shadow">
+          Aller au contenu
+        </a>
+        {children}
       </body>
     </html>
   );

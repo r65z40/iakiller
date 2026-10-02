@@ -2,5 +2,12 @@ node_modules/
 .next/
 out/
 .env
-data/*.json
-!data/.gitkeep
+.env.local
+.env.*.local
+storage/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+next-env.d.ts
+storage-test/
