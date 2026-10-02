@@ -2,6 +2,8 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { loadEntitlement } from "@/lib/billing/load";
 import { parseDocument, type CardDocument } from "./document";
+import { applyBrandLocks } from "@/lib/brand";
+import { getBrand } from "@/lib/brand-service";
 
 export type PublicCardResult =
   | { kind: "ok"; organization: typeof schema.organization.$inferSelect; card: typeof schema.card.$inferSelect; document: CardDocument; versionId: string }
@@ -31,7 +33,10 @@ async function loadAccessible(org: typeof schema.organization.$inferSelect, card
   if (!version) return { kind: "unavailable" };
   const parsed = parseDocument(version.document);
   if (!parsed.success) return { kind: "unavailable" };
-  return { kind: "ok", organization: org, card, document: parsed.data, versionId: version.id };
+  // Les verrous de marque s'appliquent aussi au rendu : un changement de charte par le
+  // propriétaire est visible immédiatement sur toutes les cartes publiées.
+  const document = applyBrandLocks(parsed.data, await getBrand(org.id));
+  return { kind: "ok", organization: org, card, document, versionId: version.id };
 }
 
 export async function resolvePublicCard(orgSlug: string, cardSlug: string): Promise<PublicCardResult> {
@@ -96,7 +101,17 @@ export async function isMediaPubliclyServable(mediaId: string): Promise<{ ok: bo
       ),
     )
     .limit(1);
-  if (candidates.length === 0) return { ok: false };
+  if (candidates.length === 0) {
+    // Logo de marque verrouillé : servi s'il existe au moins une carte accessible de l'organisation.
+    const brand = await getBrand(media.organizationId);
+    if (!(brand?.logoMediaId === mediaId && brand.lockedFields.includes("logo"))) return { ok: false };
+    const [anyCard] = await db
+      .select({ id: schema.card.id })
+      .from(schema.card)
+      .where(and(eq(schema.card.organizationId, media.organizationId), eq(schema.card.status, "published"), isNull(schema.card.disabledAt), isNull(schema.card.adminSuspendedAt)))
+      .limit(1);
+    if (!anyCard) return { ok: false };
+  }
   const ent = await loadEntitlement(media.organizationId);
   return ent.publicAccess ? { ok: true, media } : { ok: false };
 }

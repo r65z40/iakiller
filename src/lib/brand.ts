@@ -42,3 +42,4 @@ export function applyBrandLocks(doc: CardDocument, brand: BrandValues | null | u
   if (locked.has("company") && brand.companyName) next.identity.company = brand.companyName;
   return next;
 }
+

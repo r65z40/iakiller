@@ -54,7 +54,8 @@ export async function processUpload(input: Buffer, purpose: MediaPurpose): Promi
   }
 
   if (input.length > limits.pdfMaxBytes) throw new DomainError("invalid", `Document trop lourd (maximum ${limits.pdfMaxBytes / 1024 / 1024} Mo).`);
-  if (!detected || detected.mime !== "application/pdf" || !input.subarray(0, 5).toString("latin1").startsWith("%PDF-")) {
+  const tail = input.subarray(Math.max(0, input.length - 2048)).toString("latin1");
+  if (!detected || detected.mime !== "application/pdf" || !input.subarray(0, 5).toString("latin1").startsWith("%PDF-") || !tail.includes("%%EOF")) {
     throw new DomainError("invalid", "Seuls les documents PDF sont acceptés.");
   }
   return { kind: "document", mimeType: "application/pdf", body: input, width: null, height: null };
