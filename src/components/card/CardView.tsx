@@ -756,7 +756,12 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (mode !== "public" || !publicToken) return;
+    if (mode !== "public") return;
+    if (!publicToken) {
+      setState("error");
+      setError("Formulaire de démonstration : aucun envoi n'est effectué.");
+      return;
+    }
     setState("sending");
     setError(null);
     const fd = new FormData(e.currentTarget);

@@ -169,3 +169,23 @@ export function auditActor(ctx: OrgContext) {
     supportGrantId: ctx.supportGrantId,
   };
 }
+
+/**
+ * Espace plateforme : rôle plateforme attribué hors inscription (script dédié) ET double
+ * authentification activée. Sans MFA, l'accès est redirigé vers son activation.
+ */
+export async function requireStaffPage(permission: import("@/lib/permissions").PlatformPermission = "platform.view") {
+  const user = await requireUser("/admin");
+  const { platformCan } = await import("@/lib/permissions");
+  if (!platformCan(user.platformRole, "platform.view")) redirect("/app");
+  if (!user.twoFactorEnabled) redirect("/admin/securite");
+  if (!platformCan(user.platformRole, permission)) redirect("/admin?refus=1");
+  return { id: user.id, platformRole: user.platformRole, name: user.name, email: user.email };
+}
+
+export async function requireStaffAction(permission: import("@/lib/permissions").PlatformPermission) {
+  const user = await getCurrentUser();
+  const { platformCan } = await import("@/lib/permissions");
+  if (!user || !user.twoFactorEnabled || !platformCan(user.platformRole, permission)) throw new ForbiddenError();
+  return { id: user.id, platformRole: user.platformRole, name: user.name, email: user.email };
+}

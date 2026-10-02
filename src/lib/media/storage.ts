@@ -73,7 +73,7 @@ export function storage(): ObjectStorage {
       if (!process.env.S3_BUCKET) throw new Error("S3_BUCKET manquant");
       instance = new S3Storage(process.env.S3_BUCKET);
     } else {
-      instance = new LocalStorage(path.resolve(process.env.LOCAL_STORAGE_DIR || "./storage"));
+      instance = new LocalStorage(path.resolve(/*turbopackIgnore: true*/ process.env.LOCAL_STORAGE_DIR || "./storage"));
     }
   }
   return instance;
