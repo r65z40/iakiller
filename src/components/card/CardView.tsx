@@ -195,6 +195,7 @@ export function CardView(props: CardViewProps) {
                   vcardUrl={props.vcardUrl}
                   publicToken={props.publicToken}
                   leadFormToken={props.leadFormToken}
+                  getViewId={() => (analyticsActive ? viewId.current || null : null)}
                 />
               </div>
             );
@@ -449,6 +450,7 @@ function Block(props: {
   vcardUrl?: string;
   publicToken?: string;
   leadFormToken?: string;
+  getViewId?: () => string | null;
 }) {
   const { block, doc, track, mode, media } = props;
   const theme = doc.theme;
@@ -713,7 +715,7 @@ function Block(props: {
       return (
         <Section>
           <SectionTitle>{block.title}</SectionTitle>
-          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
+          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} getViewId={props.getViewId} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
         </Section>
       );
   }
@@ -741,7 +743,7 @@ function VideoEmbed({ provider, videoId, title, mode, onPlay }: { provider: "you
 
 type LeadBlock = Extract<CardBlock, { type: "leadForm" }>;
 
-function LeadForm({ block, mode, publicToken, formToken, company }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string }) {
+function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const fields = block.fields;
@@ -758,7 +760,7 @@ function LeadForm({ block, mode, publicToken, formToken, company }: { block: Lea
     setState("sending");
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const body: Record<string, unknown> = { token: publicToken, formToken };
+    const body: Record<string, unknown> = { token: publicToken, formToken, viewId: getViewId?.() ?? null };
     fd.forEach((v, k) => (body[k] = typeof v === "string" ? v : ""));
     body.marketingConsent = fd.get("marketingConsent") === "on";
     try {
