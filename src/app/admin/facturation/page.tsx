@@ -1,3 +1,4 @@
+import { DownloadLink } from "@/components/ui/DownloadLink";
 import { requireStaffPage } from "@/lib/context";
 import { billingEvents } from "@/lib/admin/service";
 import { platformCan } from "@/lib/permissions";
@@ -9,7 +10,7 @@ export default async function AdminBilling() {
   const events = await billingEvents(staff);
   return (
     <>
-      <PageHeader title="Facturation" description="Journal des webhooks Stripe. Un événement en échec est rejoué par Stripe ; la réconciliation planifiée relit l'état courant." actions={platformCan(staff.platformRole, "platform.finance.export") && <a href="/admin/facturation/export" className="text-sm font-semibold text-brand underline">Export financier (CSV)</a>} />
+      <PageHeader title="Facturation" description="Journal des webhooks Stripe. Un événement en échec est rejoué par Stripe ; la réconciliation planifiée relit l'état courant." actions={platformCan(staff.platformRole, "platform.finance.export") && <DownloadLink href="/admin/facturation/export" className="text-sm font-semibold text-brand underline">Export financier (CSV)</DownloadLink>} />
       <Panel>
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase text-muted"><tr><th className="py-2">Reçu</th><th>Type</th><th>Mode</th><th>Statut</th><th>Erreur</th></tr></thead>

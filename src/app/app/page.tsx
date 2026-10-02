@@ -4,7 +4,7 @@ import { requireOrgPage } from "@/lib/context";
 import { db, schema } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { STATE_LABELS } from "@/lib/billing/entitlements";
-import { formatDateTime } from "@/lib/format";
+import { daysAgo, formatDateTime } from "@/lib/format";
 import { listCardsForActor } from "@/lib/cards/service";
 import { Alert, ButtonLink, PageHeader, Panel } from "@/components/ui";
 
@@ -13,7 +13,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/app">) {
   const sp = await searchParams;
   const cards = await listCardsForActor(ctx);
   const published = cards.filter((c) => c.status === "published" && !c.disabledAt).length;
-  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  const since = daysAgo(30);
   const allCards = can(ctx, "analytics.viewAll");
   const cardIds = cards.map((c) => c.id);
 

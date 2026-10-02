@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import {
   Calendar, Clock, Download, FileText, Globe, Link as LinkIcon, Mail, MapPin, MessageCircle, MessageSquare,
   Phone, Play, Smartphone, Star, Store, UserPlus,
@@ -58,6 +58,10 @@ function readConsent(): "granted" | "denied" | null {
   }
 }
 
+function noopSubscribe() {
+  return () => {};
+}
+
 function writeConsent(v: "granted" | "denied") {
   try {
     window.localStorage.setItem(CONSENT_KEY, v);
@@ -70,8 +74,11 @@ export function CardView(props: CardViewProps) {
   const { doc, media, mode } = props;
   const theme = doc.theme;
   const viewId = useRef<string>("");
-  const [consent, setConsent] = useState<"granted" | "denied" | null>(null);
-  const [consentLoaded, setConsentLoaded] = useState(false);
+  // Choix de consentement lu côté navigateur (undefined pendant le rendu serveur).
+  const storedConsent = useSyncExternalStore(noopSubscribe, readConsent, () => undefined);
+  const [consentOverride, setConsent] = useState<"granted" | "denied" | null>(null);
+  const consent = consentOverride ?? storedConsent ?? null;
+  const consentLoaded = storedConsent !== undefined;
   const sentView = useRef(false);
 
   const analyticsActive =
@@ -103,8 +110,6 @@ export function CardView(props: CardViewProps) {
 
   useEffect(() => {
     if (mode !== "public") return;
-    setConsent(readConsent());
-    setConsentLoaded(true);
     // Retire les paramètres de suivi de l'adresse affichée (partage plus propre).
     try {
       const url = new URL(window.location.href);

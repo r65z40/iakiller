@@ -1,3 +1,4 @@
+import { DownloadLink } from "@/components/ui/DownloadLink";
 import { requireOrgPage } from "@/lib/context";
 import { listLeads } from "@/lib/leads/service";
 import { can } from "@/lib/permissions";
@@ -15,7 +16,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/app/prospe
   const leads = await listLeads(ctx, { status: status || undefined, limit: 50, offset: page * 50 });
   return (
     <>
-      <PageHeader title="Prospects" description="Demandes envoyées depuis le formulaire de vos cartes. Visibles uniquement par votre organisation, selon vos droits." actions={<a href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</a>} />
+      <PageHeader title="Prospects" description="Demandes envoyées depuis le formulaire de vos cartes. Visibles uniquement par votre organisation, selon vos droits." actions={<DownloadLink href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</DownloadLink>} />
       <nav aria-label="Filtrer par statut" className="mb-4 flex flex-wrap gap-2">
         {Object.entries(STATUS).map(([k, label]) => (
           <a key={k} href={k ? `/app/prospects?statut=${k}` : "/app/prospects"} aria-current={status === k ? "page" : undefined} className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${status === k ? "bg-brand text-white ring-brand" : "bg-white ring-line"}`}>{label}</a>

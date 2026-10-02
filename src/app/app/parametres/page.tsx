@@ -1,3 +1,4 @@
+import { DownloadLink } from "@/components/ui/DownloadLink";
 import { requireOrgPage } from "@/lib/context";
 import { listMembers } from "@/lib/orgs/members";
 import { can } from "@/lib/permissions";
@@ -33,7 +34,7 @@ export default async function SettingsPage() {
       )}
       {isOwner && (
         <Panel title="Données de l'organisation" description="Export des contenus, membres et prospects au format JSON (hors fichiers binaires). Les cartes exportées ne sont pas publiables en dehors du service.">
-          <a href="/app/parametres/export" className="text-sm font-semibold text-brand underline">Télécharger l&apos;export JSON</a>
+          <DownloadLink href="/app/parametres/export" className="text-sm font-semibold text-brand underline">Télécharger l&apos;export JSON</DownloadLink>
         </Panel>
       )}
       {isOwner && members.length > 0 && (

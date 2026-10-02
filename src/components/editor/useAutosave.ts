@@ -24,6 +24,7 @@ export function useAutosave(cardId: string, initialRevision: number) {
   const inFlight = useRef(false);
   const attempt = useRef(0);
   const conflictRevision = useRef<number | null>(null);
+  const flushRef = useRef<() => Promise<boolean>>(async () => true);
 
   const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current) {
@@ -59,7 +60,7 @@ export function useAutosave(cardId: string, initialRevision: number) {
         setStatus("saved");
       } else {
         setStatus("dirty");
-        timer.current = setTimeout(() => void flush(), 300);
+        timer.current = setTimeout(() => void flushRef.current(), 300);
       }
       inFlight.current = false;
       return true;
@@ -69,10 +70,13 @@ export function useAutosave(cardId: string, initialRevision: number) {
       setError("Connexion perdue. Nouvelle tentative automatique…");
       const delay = RETRY_DELAYS[Math.min(attempt.current, RETRY_DELAYS.length - 1)];
       attempt.current++;
-      timer.current = setTimeout(() => void flush(), delay);
+      timer.current = setTimeout(() => void flushRef.current(), delay);
       return false;
     }
   }, [cardId]);
+  useEffect(() => {
+    flushRef.current = flush;
+  }, [flush]);
 
   const schedule = useCallback(
     (doc: CardDocument, title: string) => {

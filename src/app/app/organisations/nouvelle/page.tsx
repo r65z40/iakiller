@@ -20,7 +20,7 @@ export default async function NewOrganizationPage() {
                 <Input id="slug" name="slug" pattern="[a-z0-9-]{2,48}" placeholder="menuiserie-durand" />
               </Field>
               <p className="text-sm text-muted">L&apos;essai gratuit de 7 jours démarre maintenant, sans carte bancaire : jusqu&apos;à 3 cartes. À la fin de l&apos;essai, rien n&apos;est facturé automatiquement.</p>
-              <SubmitButton disabled={!user.emailVerified} pendingLabel="Création…">Créer et démarrer l'essai</SubmitButton>
+              <SubmitButton disabled={!user.emailVerified} pendingLabel="Création…">Créer et démarrer l&apos;essai</SubmitButton>
         </ActionForm>
       </Panel>
     </div>

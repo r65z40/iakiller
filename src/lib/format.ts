@@ -21,3 +21,7 @@ export function parisDay(d: Date): string {
   const get = (t: string) => parts.find((p) => p.type === t)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
+
+export function daysAgo(days: number, from = new Date()): Date {
+  return new Date(from.getTime() - days * 86400_000);
+}
