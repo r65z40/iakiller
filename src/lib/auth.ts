@@ -1,35 +1,97 @@
-import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
+import { twoFactor } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { appUrl, brand, envAppUrl } from "@/lib/config";
+import { sendEmail } from "@/lib/email/send";
+import { templates } from "@/lib/email/templates";
+import { newId } from "@/lib/ids";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "iakiller-secret-change-me"
-);
+/**
+ * Authentification : Better Auth (email + mot de passe, email vérifié obligatoire,
+ * réinitialisation, TOTP). Les sessions sont stockées en base et révocables.
+ */
+export const auth = betterAuth({
+  appName: brand.name,
+  baseURL: appUrl(),
+  secret: process.env.BETTER_AUTH_SECRET,
+  // Domaine réglé dans l'administration + URL technique (APP_URL).
+  trustedOrigins: () => [...new Set([envAppUrl(), appUrl()])],
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: schema.user,
+      session: schema.session,
+      account: schema.account,
+      verification: schema.verification,
+      twoFactor: schema.twoFactor,
+      rateLimit: schema.rateLimit,
+    },
+  }),
+  advanced: {
+    database: { generateId: () => newId() },
+    useSecureCookies: appUrl().startsWith("https://"),
+  },
+  user: {
+    additionalFields: {
+      platformRole: { type: "string", required: false, input: false },
+      disabledAt: { type: "date", required: false, input: false },
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 14,
+    updateAge: 60 * 60 * 24,
+  },
+  rateLimit: {
+    // Désactivable uniquement pour les tests automatisés (AUTH_RATE_LIMIT=off).
+    enabled: process.env.NODE_ENV !== "test" && process.env.AUTH_RATE_LIMIT !== "off",
+    storage: "database",
+    window: 60,
+    max: 60,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 8 },
+      "/sign-up/email": { window: 300, max: 5 },
+      "/request-password-reset": { window: 300, max: 5 },
+      "/send-verification-email": { window: 300, max: 5 },
+      "/two-factor/verify-totp": { window: 60, max: 6 },
+    },
+  },
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    minPasswordLength: 10,
+    maxPasswordLength: 128,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({ to: user.email, template: "resetPassword", email: templates.resetPassword({ name: user.name, url }) });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 3600,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({ to: user.email, template: "verifyEmail", email: templates.verifyEmail({ name: user.name, url }) });
+    },
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        // Un compte désactivé par la plateforme ne peut plus ouvrir de session.
+        before: async (session) => {
+          const [u] = await db
+            .select({ disabledAt: schema.user.disabledAt })
+            .from(schema.user)
+            .where(eq(schema.user.id, session.userId));
+          if (u?.disabledAt) return false;
+        },
+      },
+    },
+  },
+  plugins: [twoFactor({ issuer: brand.name }), nextCookies()],
+});
 
-export async function signToken(payload: { email: string; id: string }): Promise<string> {
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("24h")
-    .sign(JWT_SECRET);
-}
-
-export async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { email: string; id: string };
-  } catch {
-    return null;
-  }
-}
-
-export async function getAdminFromCookies() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
-  if (!token) return null;
-  return verifyToken(token);
-}
-
-export async function isAdmin(): Promise<boolean> {
-  const admin = await getAdminFromCookies();
-  return admin !== null;
-}
+export type AuthSession = typeof auth.$Infer.Session;

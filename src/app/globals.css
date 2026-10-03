@@ -1,156 +1,53 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/source-serif-4";
 
-:root {
-  --bg: #050510;
-  --bg-card: #0f0f23;
-  --bg-card-hover: #16163a;
-  --border: #1e1e4a;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --accent: #a855f7;
-  --accent-hover: #c084fc;
+@theme {
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand: #0047bb;
+  --color-brand-dark: #003a99;
+  --color-brand-soft: #e8effc;
+  --color-ink: #14213d;
+  --color-muted: #5b6478;
+  --color-line: #e3e8f0;
+  --color-surface: #f4f6fa;
+  --color-danger: #b42318;
+  --color-success: #067647;
+  --color-warning: #b54708;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
+  color: var(--color-ink);
+  background: var(--color-surface);
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #a855f7, #6366f1, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Focus toujours visible pour la navigation au clavier. */
+:focus-visible {
+  outline: 3px solid #0047bb;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.gradient-bg {
-  background: linear-gradient(135deg, #a855f7, #6366f1);
+.card-root :focus-visible {
+  outline-color: var(--c-primary, #0047bb);
 }
 
-.gradient-border {
-  border: 1px solid transparent;
-  background-clip: padding-box;
-  position: relative;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.gradient-border::before {
-  content: "";
+.sr-only-focusable:not(:focus):not(:focus-within) {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, #a855f7, #6366f1, #ec4899);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  transition: all 0.2s;
-}
-
-.card:hover {
-  background: var(--bg-card-hover);
-  border-color: #a855f744;
-}
-
-.glow {
-  box-shadow: 0 0 40px rgba(168, 85, 247, 0.15);
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-.float-animation {
-  animation: float 6s ease-in-out infinite;
-}
-
-.tab-active {
-  background: linear-gradient(135deg, #a855f7, #6366f1);
-  color: white;
-}
-
-.tab-inactive {
-  background: var(--bg-card);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
-
-.tab-inactive:hover {
-  border-color: #a855f744;
-  color: var(--text);
-}
-
-.dropzone {
-  border: 2px dashed var(--border);
-  transition: all 0.3s;
-}
-
-.dropzone:hover,
-.dropzone.active {
-  border-color: var(--accent);
-  background: rgba(168, 85, 247, 0.05);
-}
-
-.progress-bar {
-  background: linear-gradient(90deg, #a855f7, #6366f1, #ec4899);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.stat-card {
-  background: linear-gradient(135deg, var(--bg-card), var(--bg-card-hover));
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-}
-
-.chart-bar {
-  background: linear-gradient(to top, #a855f7, #6366f1);
-  border-radius: 4px 4px 0 0;
-  transition: height 0.3s ease;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(40px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-.animate-toast-in {
-  animation: toast-in 0.3s ease-out;
-}
-
-.image-compare-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: col-resize;
-}
-
-.image-compare-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 4px;
-  height: 100%;
-  background: #a855f7;
-  cursor: col-resize;
-  border: none;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
