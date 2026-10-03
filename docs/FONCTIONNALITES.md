@@ -118,6 +118,8 @@ Couleurs, police, logo et nom de société de l'entreprise, appliqués à toutes
 
 ---
 
+- **Signature email** : depuis une carte, générez une signature d'email (trois styles) aux couleurs de la carte, à copier-coller dans Gmail, Outlook ou Apple Mail. Elle renvoie vers la carte et reste à jour. Écran : `/app/cartes/{id}/signature`.
+
 ## 5. QR code, partage et Wallet
 
 - **QR code permanent** (`/r/{jeton}`) : il reste valable même si l'adresse de la carte change. Téléchargement en PNG (impression) et SVG (graphiste).

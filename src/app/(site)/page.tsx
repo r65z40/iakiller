@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight } from "lucide-react";
+import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { brand } from "@/lib/config";
 import { listPlans } from "@/lib/billing/service";
 import { DemoCard } from "@/components/site/DemoCard";
@@ -31,6 +31,7 @@ const FEATURES = [
   { icon: Smartphone, title: "Pensée pour le mobile", text: "Grands boutons d'appel, lisible au soleil, rapide même en 4G faible. Compatible Apple et Google Wallet." },
   { icon: Inbox, title: "Des demandes de contact", text: "Formulaire intégré, sans abonnement marketing imposé au visiteur, avec protection anti-spam." },
   { icon: BarChart3, title: "Statistiques expliquées", text: "Ouvertures, clics et sources — avec la définition de chaque chiffre et ses limites. Aucun chiffre trompeur." },
+  { icon: Mail, title: "Signature email assortie", text: "Générez une signature d'email aux couleurs de votre carte, à coller dans Gmail, Outlook ou Apple Mail." },
   { icon: Users, title: "Pour toute l'équipe", text: "Charte graphique commune, champs verrouillés, import CSV des salariés, désactivation immédiate d'un départ." },
 ];
 
@@ -154,6 +155,41 @@ export default async function Home() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* Signature email */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="grid items-center gap-10 rounded-3xl bg-gradient-to-br from-brand-soft to-white p-8 ring-1 ring-brand/15 lg:grid-cols-2 lg:p-12">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-brand ring-1 ring-brand/20">
+              <Mail className="h-4 w-4" /> Nouveau
+            </span>
+            <h2 className="mt-4 text-3xl font-extrabold">Une signature email assortie, en un clic</h2>
+            <p className="mt-3 text-muted">
+              À partir de votre carte, générez une signature d&apos;email élégante, aux couleurs de votre entreprise, qui renvoie vers votre carte de visite. Chaque email devient une occasion d&apos;être contacté.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm">
+              <li className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Compatible Gmail, Outlook et Apple Mail</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Reprend vos coordonnées et votre charte automatiquement</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Toujours à jour : votre carte change, votre lien reste</li>
+            </ul>
+            <Link href="/inscription" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-white transition hover:bg-brand-dark">
+              Créer ma signature <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-line">
+            <div style={{ borderLeft: "3px solid var(--color-brand)", paddingLeft: 14 }}>
+              <div className="text-base font-bold text-ink">Camille Moreau</div>
+              <div className="text-sm font-semibold text-brand">Menuisière agenceuse · Atelier Moreau</div>
+              <div className="mt-2 space-y-0.5 text-[13px] text-muted">
+                <div>Mobile <span className="text-ink">06 39 98 12 34</span></div>
+                <div>Email <span className="text-ink">contact@atelier-moreau.exemple</span></div>
+              </div>
+              <span className="mt-3 inline-block rounded-md bg-brand px-3 py-1.5 text-[13px] font-bold text-white">Voir ma carte de visite</span>
+            </div>
+            <p className="mt-3 text-center text-xs text-muted">Exemple de signature générée.</p>
+          </div>
         </div>
       </section>
 

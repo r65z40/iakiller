@@ -83,6 +83,7 @@ export default async function CardsPage({ searchParams }: PageProps<"/app/cartes
                 <p className="mt-1 truncate text-sm text-muted">
                   {base}/{card.slug} · modifiée le {formatDate(card.updatedAt)}
                 </p>
+                <Link href={`/app/cartes/${card.id}/signature`} className="mt-1 inline-block text-sm font-semibold text-brand hover:underline">Signature email</Link>
               </div>
               <CardRowActions
                 card={{ id: card.id, status: card.status, disabled: !!card.disabledAt, publicUrl: `${base}/${card.slug}` }}

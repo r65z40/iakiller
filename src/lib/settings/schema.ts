@@ -113,8 +113,8 @@ export function defaultSettings(): PlatformSettings {
   const raw = Number(process.env.ANALYTICS_RAW_RETENTION_DAYS ?? "395");
   return {
     brand: {
-      name: env("NEXT_PUBLIC_BRAND_NAME") || "Carto",
-      tagline: "Cartes de visite numériques pour les professionnels",
+      name: env("NEXT_PUBLIC_BRAND_NAME") || "MaCartePro",
+      tagline: "Votre carte de visite numérique, aux couleurs de votre entreprise",
       publicUrl: "",
       supportEmail: env("SUPPORT_EMAIL") || "support@example.invalid",
       emailFrom: env("EMAIL_FROM"),
