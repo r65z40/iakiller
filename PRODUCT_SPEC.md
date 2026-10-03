@@ -1,6 +1,6 @@
 # Spécification produit
 
-SaaS de cartes de visite numériques pour les professionnels français : artisans, indépendants, commerciaux, TPE et PME. Le nom de marque est provisoire (« Carto », centralisé dans `src/lib/config.ts`).
+SaaS de cartes de visite numériques pour les professionnels français : artisans, indépendants, commerciaux, TPE et PME. Le nom de marque par défaut est « MaCartePro » (modifiable dans `/admin/reglages`, centralisé dans `src/lib/config.ts`).
 
 ## Personas
 - **Artisan ou indépendant** : une carte, création rapide sur mobile ou sur ordinateur, QR code à imprimer.

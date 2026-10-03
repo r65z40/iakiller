@@ -3,16 +3,22 @@
 ## Configuration en mode test
 
 1. Créer un compte Stripe et rester en **mode test**.
-2. Créer un produit par plan, avec un prix récurrent mensuel et un prix annuel en EUR. Choisir explicitement le comportement fiscal (HT ou TTC) selon la décision prise avec l'expert-comptable.
-3. Créer un produit « Création accompagnée » avec un prix ponctuel.
-4. Dans `/admin/plans`, saisir pour chaque plan les montants (identiques à Stripe), la présentation HT/TTC et l'identifiant `price_…`, puis décocher « démonstration » une fois les valeurs validées.
-5. Variables : `STRIPE_SECRET_KEY=sk_test_…`, puis lancer le relais des webhooks :
+2. Renseigner `STRIPE_SECRET_KEY=sk_test_…` dans `.env` et redémarrer l'application.
+3. **Le plus simple** : dans `/admin/plans`, vérifier les montants et la présentation HT/TTC de
+   chaque plan, puis cliquer sur **« Créer / synchroniser les prix dans Stripe »**. Les produits
+   et les prix récurrents (mensuel et annuel) sont créés automatiquement dans votre compte Stripe,
+   leurs identifiants `price_…` sont enregistrés et le marquage « démonstration » est retiré.
+   L'opération est sans risque à répéter : un prix déjà associé est ignoré.
+   *Alternative manuelle* : créer les produits/prix dans le tableau de bord Stripe, puis coller
+   chaque `price_…` dans `/admin/plans`. Pour la « Création accompagnée » (prix ponctuel), la
+   saisie reste manuelle.
+4. Lancer le relais des webhooks :
    ```bash
    stripe listen --forward-to localhost:3000/api/stripe/webhook
    ```
    et copier le `whsec_…` affiché dans `STRIPE_WEBHOOK_SECRET`.
-6. Portail client (Paramètres > Billing > Customer portal) : autoriser la mise à jour du moyen de paiement et l'historique des factures. **Désactiver le changement de formule** dans le portail : il se fait dans l'application, qui contrôle les quotas.
-7. Événements à envoyer au webhook en production : `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created|updated|deleted|paused|resumed`, `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`.
+5. Portail client (Paramètres > Billing > Customer portal) : autoriser la mise à jour du moyen de paiement et l'historique des factures. **Désactiver le changement de formule** dans le portail : il se fait dans l'application, qui contrôle les quotas.
+6. Événements à envoyer au webhook en production : `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created|updated|deleted|paused|resumed`, `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`.
 
 ## Scénarios de test manuels (à dérouler avant la production)
 

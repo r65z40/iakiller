@@ -1,4 +1,4 @@
-# sudo cp deploy/systemd/carto-jobs.* /etc/systemd/system/ && sudo systemctl enable --now carto-jobs.timer
+# sudo cp deploy/systemd/macartepro-jobs.* /etc/systemd/system/ && sudo systemctl enable --now macartepro-jobs.timer
 [Unit]
 Description=Tâches planifiées des cartes de visite (toutes les 15 minutes)
 

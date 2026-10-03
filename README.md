@@ -15,27 +15,17 @@ Documents : [PRODUCT_SPEC](PRODUCT_SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) �
 
 ```bash
 git clone <adresse du dépôt> macartepro && cd macartepro
+chmod +x install.sh
 ./install.sh          # interactif : dépendances, secrets, base, migrations, données de départ
 npm run dev           # http://localhost:3000
 ```
 
-`./install.sh --yes` installe sans poser de question (valeurs locales par défaut). La configuration guidée seule (si les dépendances sont déjà installées) : `npm run setup`. À tout moment, `npm run doctor` vérifie la configuration.
+- `./install.sh --yes` : installe sans poser de question (valeurs locales par défaut).
+- `npm run setup` : configuration guidée seule, si les dépendances sont déjà installées.
+- `npm run doctor` : vérifie la configuration à tout moment.
 
-Guide complet (dont la mise en production) : [docs/INSTALLATION.md](docs/INSTALLATION.md).
-
-```bash
-npm install
-cp .env.example .env
-# Renseigner au minimum DATABASE_URL et BETTER_AUTH_SECRET (openssl rand -base64 48)
-
-# Base de données (exemple)
-sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD 'cartes' CREATEDB;"
-sudo -u postgres createdb -O cartes cartes_dev
-
-npm run db:migrate      # applique les migrations
-npm run db:seed         # plans et prestation de démonstration, compte fictif
-npm run dev             # http://localhost:3000
-```
+**Guide pas à pas, chaque commande détaillée (pour débuter) et mise en production** :
+[docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ### Comptes de test
 
@@ -71,6 +61,10 @@ npm run jobs -- --watch  # boucle continue
 
 Base de données et fichiers, chiffrés, incrémentaux, vérifiés, avec essai de restauration automatique et alertes : `/admin/sauvegardes` et `npm run backup`. Voir [docs/SAUVEGARDE.md](docs/SAUVEGARDE.md).
 
+## Signature email
+
+Depuis une carte (`/app/cartes/{id}/signature`), générez une signature d'email aux couleurs de la carte (trois styles, logo en bannière, mini QR code), avec copie en un clic et ouverture directe des réglages Gmail. Voir [docs/FONCTIONNALITES.md](docs/FONCTIONNALITES.md).
+
 ## Apple Wallet et Google Wallet
 
 Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (procédure dans [docs/WALLET.md](docs/WALLET.md)). Sans elles, les boutons sont masqués.
@@ -80,7 +74,7 @@ Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (pr
 ```bash
 npm run typecheck
 npm run lint
-npm test                 # 101 tests unitaires et d'intégration (base cartes_test requise)
+npm test                 # 117 tests unitaires et d'intégration (base cartes_test requise)
 npm run test:e2e         # 6 parcours Playwright (base cartes_e2e requise)
 npm run build
 ```

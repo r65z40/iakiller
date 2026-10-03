@@ -1,5 +1,5 @@
 # Application web. Installation : voir docs/INSTALLATION.md, section « Production ».
-# sudo cp deploy/systemd/carto.service /etc/systemd/system/ && sudo systemctl enable --now carto
+# sudo cp deploy/systemd/macartepro.service /etc/systemd/system/ && sudo systemctl enable --now macartepro
 [Unit]
 Description=Cartes de visite numériques (Next.js)
 After=network-online.target postgresql.service
@@ -7,12 +7,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=carto
-Group=carto
-WorkingDirectory=/opt/carto
-EnvironmentFile=/opt/carto/.env
+User=macartepro
+Group=macartepro
+WorkingDirectory=/opt/macartepro
+EnvironmentFile=/opt/macartepro/.env
 Environment=NODE_ENV=production
-Environment=npm_config_cache=/opt/carto/.npm
+Environment=npm_config_cache=/opt/macartepro/.npm
 Environment=PORT=3000
 Environment=HOSTNAME=127.0.0.1
 ExecStart=/usr/bin/npm start
@@ -23,7 +23,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/carto/storage /opt/carto/backups /opt/carto/.next /opt/carto/.npm
+ReadWritePaths=/opt/macartepro/storage /opt/macartepro/backups /opt/macartepro/.next /opt/macartepro/.npm
 
 [Install]
 WantedBy=multi-user.target

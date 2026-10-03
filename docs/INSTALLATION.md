@@ -1,262 +1,396 @@
-# Installation
+# Installation de MaCartePro
 
-Ce guide couvre trois situations :
+Ce guide est volontairement détaillé : **chaque commande est écrite en entier**, même les plus
+simples, pour qu'une personne débutante puisse suivre pas à pas sans rien deviner.
 
-1. [Poste de développement](#1-poste-de-développement) : essayer l'application en local, en une quinzaine de minutes.
-2. [Serveur de production](#2-serveur-de-production) : un serveur Ubuntu 24.04 avec HTTPS, tâches planifiées et sauvegardes.
-3. [Mises à jour](#3-mettre-à-jour) et [dépannage](#4-dépannage).
+Trois parcours :
 
-Après chaque installation, lancez `npm run doctor` : la commande vérifie la configuration point par point et indique quoi corriger.
+1. [Installer sur votre ordinateur (découverte / développement)](#1-installer-sur-votre-ordinateur) — environ 15 minutes.
+2. [Installer sur un serveur (production)](#2-installer-sur-un-serveur-production) — pour mettre le service en ligne.
+3. [Mettre à jour](#3-mettre-à-jour) et [Dépannage](#4-dépannage).
+
+> **Comment utiliser ce guide ?** Ouvrez un **terminal** (sur Windows, voir l'encadré ci‑dessous),
+> puis copiez‑collez les commandes **une par une**, en appuyant sur Entrée après chacune. Les
+> lignes qui commencent par `#` sont des commentaires : elles expliquent, elles ne s'exécutent pas.
+
+<details>
+<summary>Où trouver le terminal ?</summary>
+
+- **Windows** : installez d'abord « WSL » (Ubuntu dans Windows). Ouvrez *PowerShell* en
+  administrateur et tapez `wsl --install`, redémarrez, puis ouvrez l'application **Ubuntu**.
+  Toutes les commandes de ce guide se tapent dans cette fenêtre Ubuntu.
+- **macOS** : ouvrez l'application **Terminal** (Spotlight → tapez « Terminal »).
+- **Linux** : ouvrez votre application **Terminal** habituelle.
+
+</details>
 
 ---
 
 ## Ce qu'il faut
 
-| Élément | Version | Rôle |
+| Élément | À quoi ça sert | Obligatoire ? |
 |---|---|---|
-| Node.js | 22 LTS (20.9 minimum) | exécute l'application et les tâches |
-| PostgreSQL | 16 | base de données |
-| Client PostgreSQL (`pg_dump`, `pg_restore`) | même version majeure que le serveur, ou plus récente | sauvegardes |
-| Stockage S3 compatible | — | fichiers des clients en production (le disque local suffit en développement) |
-| Serveur SMTP | — | emails : confirmation d'adresse, invitations, alertes |
-| Compte Stripe | — | abonnements et prestations (facultatif pour essayer) |
-| Nom de domaine + HTTPS | — | adresses des cartes et QR codes |
+| **Node.js 22** (20.9 minimum) | fait tourner l'application | Oui |
+| **PostgreSQL 16** | la base de données | Oui |
+| **Git** | télécharger le projet | Oui |
+| Client PostgreSQL (`pg_dump`) | les sauvegardes | Oui (fourni avec PostgreSQL) |
+| Compte **Stripe** | encaisser les abonnements | Non (facultatif pour essayer) |
+| Serveur **SMTP** | envoyer les emails | Non en local, oui en production |
+| **Nom de domaine + HTTPS** | mettre en ligne | Production uniquement |
 
 ---
 
-## 1. Poste de développement
+## 1. Installer sur votre ordinateur
 
-### 1.1 Installer les prérequis
+### Étape 1 — Installer les prérequis
 
-Ubuntu ou Debian :
+**Sur Ubuntu / Debian / Windows (WSL)**, copiez ces deux commandes, l'une après l'autre :
 
 ```bash
+# 1) Ajouter la source officielle de Node.js 22
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+
+# 2) Installer Node.js, PostgreSQL, le client PostgreSQL et Git
 sudo apt install -y nodejs postgresql-16 postgresql-client-16 git
 ```
 
-macOS (Homebrew) :
+**Sur macOS** (avec [Homebrew](https://brew.sh)) :
 
 ```bash
-brew install node@22 postgresql@16
+# Installer Node.js, PostgreSQL et Git
+brew install node@22 postgresql@16 git
+
+# Démarrer PostgreSQL
 brew services start postgresql@16
 ```
 
-### 1.2 Installer en une commande
+**Vérifiez que tout est bien installé** (chaque commande doit afficher un numéro de version) :
 
 ```bash
-git clone <adresse du dépôt> macartepro
-cd macartepro
-./install.sh          # ou ./install.sh --yes pour tout accepter par défaut
-npm run dev           # http://localhost:3000
+node -v      # doit afficher v22.x (ou v20.9 minimum)
+psql --version
+git --version
 ```
 
-`./install.sh` installe les dépendances puis lance la configuration guidée (`npm run setup`), qui :
-génère les secrets (clé d'authentification, clé de chiffrement des sauvegardes), écrit `.env`,
-crée la base en local si elle n'existe pas, applique les migrations, insère les données de
-démonstration, propose de créer l'administrateur, puis lance le diagnostic `npm run doctor`.
+Si une commande répond « command not found » (commande introuvable), c'est que l'installation
+précédente n'a pas fonctionné : reprenez l'étape 1.
 
-C'est tout pour un poste de développement. Les sections suivantes détaillent les étapes
-manuelles, utiles pour comprendre ou personnaliser l'installation — elles sont facultatives si
-`./install.sh` a réussi.
+### Étape 2 — Télécharger le projet
 
-<details>
-<summary>Étapes manuelles équivalentes (facultatif)</summary>
+Remplacez `<adresse du dépôt>` par l'adresse Git du projet (celle qui finit par `.git`) :
 
 ```bash
+# Télécharger le code dans un dossier nommé "macartepro"
+git clone <adresse du dépôt> macartepro
+
+# Entrer dans ce dossier (toutes les commandes suivantes s'y exécutent)
+cd macartepro
+```
+
+### Étape 3 — Lancer l'installation
+
+Vous avez deux possibilités. **L'option A fait tout pour vous** ; l'option B détaille chaque
+commande si vous préférez comprendre ou personnaliser.
+
+#### Option A — Tout automatique (recommandé)
+
+```bash
+# Rend le script exécutable (à faire une seule fois)
+chmod +x install.sh
+
+# Lance l'installation guidée
+./install.sh
+```
+
+Le script pose quelques questions simples (nom de la marque, adresse, base de données) avec des
+valeurs par défaut : il suffit souvent d'appuyer sur **Entrée** à chaque question. Il installe
+les dépendances, **génère automatiquement les mots de passe secrets**, crée la base de données,
+prépare les tables, ajoute des données d'exemple, puis vérifie que tout est en ordre.
+
+Pour une installation **sans aucune question** (valeurs par défaut, en local) :
+
+```bash
+./install.sh --yes
+```
+
+#### Option B — Étape par étape (toutes les commandes)
+
+```bash
+# 1) Installer les dépendances du projet
 npm install
+
+# 2) Créer le fichier de configuration à partir de l'exemple
 cp .env.example .env
-# Renseigner DATABASE_URL et BETTER_AUTH_SECRET (openssl rand -base64 48)
+
+# 3) Générer les deux secrets et les inscrire dans le fichier .env
+#    (le premier sécurise les connexions, le second chiffre les sauvegardes)
+echo "BETTER_AUTH_SECRET=$(openssl rand -base64 48)" >> .env
+echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+
+# 4) Créer l'utilisateur et la base de données PostgreSQL
 sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD 'cartes' CREATEDB;"
 sudo -u postgres createdb -O cartes macartepro
-npm run db:migrate   # crée les tables
-npm run db:seed      # formules et organisation de démonstration
-npm run dev          # http://localhost:3000
+
+# 5) Indiquer l'adresse de la base dans .env
+echo "DATABASE_URL=postgres://cartes:cartes@localhost:5432/macartepro" >> .env
+
+# 6) Créer les tables de la base
+npm run db:migrate
+
+# 7) Ajouter les formules et une organisation de démonstration
+npm run db:seed
 ```
 
-</details>
+> **Important** : la commande `openssl rand ...` du point 3 fabrique un mot de passe aléatoire
+> unique. Ne la remplacez pas par une valeur fixe, et ne partagez jamais le contenu de `.env`.
 
-Pour vous connecter, utilisez le compte de démonstration `demo@exemple.test` (mot de passe `demo-carte-2026`). Une carte publique d'exemple est visible sur http://localhost:3000/atelier-exemple/camille-moreau-atelier-moreau.
-
-Pour créer votre propre compte, inscrivez-vous sur `/inscription` : le lien de confirmation s'affiche sur **http://localhost:3000/dev/emails**.
-
-### 1.6 Devenir administrateur de la plateforme
+### Étape 4 — Démarrer l'application
 
 ```bash
-npm run admin:create -- --email vous@exemple.test            # rôle admin
-npm run admin:create -- --email support@exemple.test --role support
+npm run dev
 ```
 
-Connectez-vous, puis activez la double authentification sur `/admin/securite`. Elle est obligatoire pour accéder à l'administration.
+Laissez cette fenêtre ouverte, puis ouvrez votre navigateur sur **http://localhost:3000**.
+Pour arrêter l'application, revenez dans le terminal et appuyez sur `Ctrl + C`.
 
-### 1.7 Lancer les tests (facultatif)
+### Étape 5 — Se connecter et regarder
+
+- **Compte de démonstration** : email `demo@exemple.test`, mot de passe `demo-carte-2026`.
+- **Carte publique d'exemple** : http://localhost:3000/atelier-exemple/camille-moreau-atelier-moreau
+- **Vos emails en local** : aucun email n'est réellement envoyé. Les liens (confirmation,
+  invitations…) s'affichent sur **http://localhost:3000/dev/emails**.
+
+Pour créer **votre** compte, cliquez sur « Essai gratuit », inscrivez‑vous, puis récupérez le
+lien de confirmation sur `/dev/emails`.
+
+### Étape 6 — Devenir administrateur
+
+Après vous être inscrit **et** avoir confirmé votre email, ouvrez un **nouveau** terminal dans le
+dossier `macartepro` (laissez `npm run dev` tourner dans l'autre) et tapez :
 
 ```bash
+# Donner le rôle administrateur à votre compte (remplacez l'email)
+npm run admin:create -- --email vous@exemple.test
+```
+
+Reconnectez‑vous, puis activez la **double authentification** sur http://localhost:3000/admin/securite
+(obligatoire pour accéder à l'administration).
+
+### (Facultatif) Vérifier et tester
+
+```bash
+# Vérifier la configuration à tout moment
+npm run doctor
+
+# Lancer les tests automatisés (nécessite deux bases dédiées)
 sudo -u postgres createdb -O cartes cartes_test
 sudo -u postgres createdb -O cartes cartes_e2e
 DATABASE_URL=postgres://cartes:cartes@localhost:5432/cartes_test npm run db:migrate
 DATABASE_URL=postgres://cartes:cartes@localhost:5432/cartes_e2e npm run db:migrate
-
-npm run typecheck && npm run lint
-npm test              # tests unitaires et d'intégration (PostgreSQL réel)
-npx playwright install chromium && npm run test:e2e   # parcours navigateur
+npm run typecheck
+npm run lint
+npm test                               # 117 tests unitaires et d'intégration
+npx playwright install chromium
+npm run test:e2e                       # 6 parcours de navigateur
 ```
 
 ---
 
-## 2. Serveur de production
+## 2. Installer sur un serveur (production)
 
-Architecture conseillée : **un seul serveur** (2 vCPU et 4 Go de RAM suffisent pour démarrer) qui fait tourner l'application et les tâches planifiées. Il s'appuie sur :
-- une base PostgreSQL 16, gérée par l'hébergeur (recommandé) ou installée sur le serveur ;
-- un bucket S3 **privé** pour les fichiers des clients ;
-- un **second** bucket S3, chez un autre fournisseur ou dans une autre région, pour les sauvegardes.
+Pour mettre le service **en ligne**. Objectif : un serveur **Ubuntu 24.04**, un nom de domaine,
+et le HTTPS automatique. Les commandes supposent le domaine `cartes.exemple.fr` — **remplacez‑le
+partout par le vôtre**.
 
-Les commandes ci-dessous supposent Ubuntu 24.04 et le domaine `cartes.exemple.fr`, à remplacer par le vôtre.
+Architecture conseillée : un seul serveur (2 vCPU, 4 Go de RAM suffisent au démarrage) avec :
+une base PostgreSQL 16, un bucket S3 **privé** pour les fichiers des clients, et un **second**
+bucket S3 (autre fournisseur ou autre région) pour les sauvegardes.
 
-### 2.1 Système
+### Étape 1 — Préparer le serveur
 
 ```bash
+# Mettre le système à jour
 sudo apt update && sudo apt upgrade -y
+
+# Installer Node.js 22, Git, le client PostgreSQL et le serveur web Caddy (HTTPS automatique)
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs git postgresql-client-16 caddy
-sudo adduser --system --group --home /opt/carto carto
+
+# Créer un utilisateur dédié, sans droits superflus, pour faire tourner l'application
+sudo adduser --system --group --home /opt/macartepro macartepro
 ```
 
-> Si la base est gérée chez un hébergeur en PostgreSQL 17, installez `postgresql-client-17` : `pg_dump` doit être au moins de la version du serveur. `npm run doctor` le vérifie.
+> Si votre base est hébergée ailleurs en PostgreSQL 17, installez plutôt
+> `postgresql-client-17` : l'outil de sauvegarde `pg_dump` doit être au moins de la version du
+> serveur. `npm run doctor` le vérifie.
 
-Si la base est sur le même serveur :
+**Si la base de données est sur ce même serveur**, installez‑la et créez‑la :
 
 ```bash
 sudo apt install -y postgresql-16
-sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD '<mot de passe fort>';"
-sudo -u postgres createdb -O cartes cartes
+sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD 'un-mot-de-passe-solide';"
+sudo -u postgres createdb -O cartes macartepro
 ```
 
-### 2.2 Code
+### Étape 2 — Récupérer le code
 
 ```bash
-sudo -u carto git clone <adresse du dépôt> /opt/carto
-cd /opt/carto
-sudo -u carto npm ci
-sudo -u carto mkdir -p storage backups .npm
+# Télécharger le projet dans /opt/macartepro (au nom de l'utilisateur dédié)
+sudo -u macartepro git clone <adresse du dépôt> /opt/macartepro
+
+# Se placer dans le dossier
+cd /opt/macartepro
+
+# Installer les dépendances (exactement celles verrouillées)
+sudo -u macartepro npm ci
+
+# Créer les dossiers de travail
+sudo -u macartepro mkdir -p storage backups .npm
 ```
 
-N'utilisez pas `npm ci --omit=dev` : les tâches planifiées et les commandes d'exploitation (`jobs`, `backup`, `doctor`, `db:migrate`) s'exécutent avec `tsx`, qui est une dépendance de développement.
+> N'utilisez pas `npm ci --omit=dev` : les tâches planifiées et les commandes d'exploitation
+> (`jobs`, `backup`, `doctor`, `db:migrate`) ont besoin d'une dépendance de développement (`tsx`).
 
-### 2.3 Configuration (`/opt/carto/.env`)
+### Étape 3 — Configurer
 
 ```bash
-sudo -u carto cp .env.example .env
-sudo chmod 600 .env
+# Créer le fichier de configuration et le protéger
+sudo -u macartepro cp .env.example .env
+sudo chmod 600 /opt/macartepro/.env
+
+# Générer les deux secrets
+sudo -u macartepro bash -c 'echo "BETTER_AUTH_SECRET=$(openssl rand -base64 48)" >> .env'
+sudo -u macartepro bash -c 'echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env'
+
+# Ouvrir le fichier pour renseigner le reste (Ctrl+O pour enregistrer, Ctrl+X pour quitter)
+sudo -u macartepro nano /opt/macartepro/.env
 ```
 
-Valeurs à renseigner (le détail de chaque variable figure dans `.env.example`) :
+Dans ce fichier, renseignez au minimum :
 
 | Variable | Valeur en production |
 |---|---|
 | `APP_URL` | `https://cartes.exemple.fr` |
-| `DATABASE_URL` | adresse de la base de production |
-| `BETTER_AUTH_SECRET` | `openssl rand -base64 48`, à ne jamais changer ensuite (sinon toutes les sessions sont fermées) |
-| `EMAIL_MODE`, `SMTP_URL`, `EMAIL_FROM` | `smtp`, `smtps://utilisateur:motdepasse@smtp.fournisseur.fr:465`, `Marque <no-reply@exemple.fr>` (domaine autorisé SPF/DKIM) |
+| `DATABASE_URL` | l'adresse de votre base |
+| `EMAIL_MODE`, `SMTP_URL`, `EMAIL_FROM` | `smtp` · `smtps://utilisateur:motdepasse@smtp.fournisseur.fr:465` · `MaCartePro <no-reply@exemple.fr>` (domaine autorisé SPF/DKIM) |
 | `STORAGE_DRIVER`, `S3_*` | `s3` et les accès du bucket **privé** des fichiers |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | voir [STRIPE.md](STRIPE.md) ; `STRIPE_ALLOW_LIVE=true` uniquement pour les clés live |
-| `BACKUP_DRIVER`, `BACKUP_S3_*` | `s3` et le bucket **dédié** aux sauvegardes, voir [SAUVEGARDE.md](SAUVEGARDE.md) |
-| `BACKUP_ENCRYPTION_KEY` | `openssl rand -base64 32`, **copiée aussi dans un gestionnaire de mots de passe hors du serveur** |
-| `BACKUP_RESTORE_TEST_DATABASE_URL` | une base vide dédiée aux essais de restauration (facultatif mais conseillé) |
-| `APPLE_WALLET_*`, `GOOGLE_WALLET_*` | facultatif, voir [WALLET.md](WALLET.md) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | voir [STRIPE.md](STRIPE.md) ; ajoutez `STRIPE_ALLOW_LIVE=true` pour une clé live |
+| `BACKUP_DRIVER`, `BACKUP_S3_*` | `s3` et le bucket **dédié** aux sauvegardes ([SAUVEGARDE.md](SAUVEGARDE.md)) |
+| `BACKUP_RESTORE_TEST_DATABASE_URL` | une base vide pour tester les restaurations (conseillé) |
+| `APPLE_WALLET_*`, `GOOGLE_WALLET_*` | facultatif ([WALLET.md](WALLET.md)) |
 
-Le nom de marque, le domaine public, les informations de la société, les durées de conservation et les autres règles se règlent ensuite dans l'administration (`/admin/reglages`). Les valeurs de `.env` ne servent que de point de départ.
+> **Gardez une copie de `BACKUP_ENCRYPTION_KEY` hors du serveur** (gestionnaire de mots de
+> passe) : sans elle, les sauvegardes chiffrées sont illisibles.
 
-### 2.4 Base de données et compilation
+La marque, le domaine, les informations de société et les règles se finaliseront ensuite dans
+l'administration (`/admin/reglages`) : les valeurs de `.env` ne sont qu'un point de départ.
+
+### Étape 4 — Préparer la base et compiler
 
 ```bash
-cd /opt/carto
-sudo -u carto npm run db:migrate
-sudo -u carto npm run db:seed        # facultatif : plans de départ (marqués « démonstration »)
-sudo -u carto npm run build
+cd /opt/macartepro
+sudo -u macartepro npm run db:migrate     # crée / met à jour les tables
+sudo -u macartepro npm run db:seed        # (facultatif) formules de départ
+sudo -u macartepro npm run build          # compile la version de production
 ```
 
-### 2.5 Services
+### Étape 5 — Démarrer automatiquement (services systemd)
 
 ```bash
-sudo cp deploy/systemd/carto.service deploy/systemd/carto-jobs.service deploy/systemd/carto-jobs.timer /etc/systemd/system/
+# Copier les fichiers de service fournis
+sudo cp deploy/systemd/macartepro.service deploy/systemd/macartepro-jobs.service deploy/systemd/macartepro-jobs.timer /etc/systemd/system/
+
+# Recharger systemd puis démarrer l'application et les tâches planifiées
 sudo systemctl daemon-reload
-sudo systemctl enable --now carto carto-jobs.timer
-systemctl status carto
+sudo systemctl enable --now macartepro macartepro-jobs.timer
+
+# Vérifier que l'application tourne
+systemctl status macartepro
 ```
 
-- `carto.service` : l'application, sur `127.0.0.1:3000`, redémarrée automatiquement.
-- `carto-jobs.timer` : lance `npm run jobs` toutes les 15 minutes. Cette commande envoie les rappels, réconcilie Stripe, relance les emails en échec, agrège les statistiques, applique la conservation et **déclenche les sauvegardes**.
+- `macartepro.service` : l'application, sur `127.0.0.1:3000`, redémarrée automatiquement.
+- `macartepro-jobs.timer` : lance les tâches toutes les 15 minutes (rappels, synchronisation
+  Stripe, emails, statistiques, conservation **et sauvegardes**).
 
-Si le stockage local ou les sauvegardes locales sont placés ailleurs que dans `/opt/carto`, adaptez `ReadWritePaths` dans les deux fichiers de service.
-
-### 2.6 HTTPS
-
-Caddy obtient et renouvelle le certificat automatiquement :
+### Étape 6 — Activer le HTTPS
 
 ```bash
+# Installer la configuration Caddy fournie et y mettre votre domaine
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 sudo sed -i 's/cartes.exemple.fr/votre-domaine.fr/' /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
-Le DNS du domaine (enregistrements A et AAAA) doit pointer vers le serveur. Avec Nginx, utilisez `deploy/nginx.conf` et `certbot --nginx`.
+Le DNS de votre domaine (enregistrements A et AAAA) doit pointer vers ce serveur. Caddy obtient
+et renouvelle le certificat tout seul. (Alternative : `deploy/nginx.conf` avec `certbot --nginx`.)
 
-Le proxy doit transmettre `X-Forwarded-For`, qui sert à la limitation de débit. Seul un proxy que vous maîtrisez doit pouvoir joindre le port 3000. Fermez-le au public :
+**Fermez l'accès direct** et n'ouvrez que le web et SSH :
 
 ```bash
-sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
+sudo ufw allow OpenSSH
+sudo ufw allow 80,443/tcp
+sudo ufw enable
 ```
 
-### 2.7 Premier administrateur
+### Étape 7 — Créer l'administrateur
 
-1. Inscrivez-vous sur `https://cartes.exemple.fr/inscription` et confirmez votre adresse (vrai email).
-2. `cd /opt/carto && sudo -u carto npm run admin:create -- --email vous@exemple.fr`
-3. Reconnectez-vous et activez la double authentification sur `/admin/securite`.
+1. Allez sur `https://cartes.exemple.fr/inscription`, inscrivez‑vous et confirmez votre (vrai) email.
+2. Donnez‑vous le rôle administrateur :
+   ```bash
+   cd /opt/macartepro
+   sudo -u macartepro npm run admin:create -- --email vous@exemple.fr
+   ```
+3. Reconnectez‑vous et activez la double authentification sur `/admin/securite`.
 
-### 2.8 Mise en service
+### Étape 8 — Dernières étapes avant d'ouvrir à la vente
 
-1. `sudo -u carto npm run doctor` : il ne doit rester aucun point bloquant.
-2. Dans `/admin/reglages`, renseignez la marque et le domaine, la société, les règles de tarification, les durées de conservation et les validations juridiques.
-3. Dans `/admin/plans`, saisissez les prix réels, les identifiants de prix Stripe et retirez les marqueurs « démonstration ».
-4. Dans `/admin/sauvegardes`, cliquez sur **Sauvegarder maintenant** et vérifiez que la sauvegarde réussit. Si une base d'essai est configurée, cliquez ensuite sur **Tester la restauration**.
-5. Le tableau de bord `/admin` liste tout ce qui bloque encore le lancement commercial.
+```bash
+# Vérifier qu'il ne reste aucun point bloquant
+sudo -u macartepro npm run doctor
+```
+
+Puis, dans l'administration :
+
+1. **`/admin/reglages`** : marque, domaine, informations de la société, règles de tarification,
+   conservation, et validation juridique des pages légales.
+2. **`/admin/plans`** : une fois `STRIPE_SECRET_KEY` renseignée, cliquez sur **« Créer /
+   synchroniser les prix dans Stripe »** : les produits et prix sont créés automatiquement et
+   les identifiants remplis. Le marquage « démonstration » disparaît.
+3. **`/admin/sauvegardes`** : cliquez sur **« Sauvegarder maintenant »** et vérifiez la réussite.
+4. Le tableau de bord **`/admin`** liste en permanence ce qui bloque encore le lancement.
 
 ---
 
 ## 3. Mettre à jour
 
 ```bash
-cd /opt/carto
-sudo -u carto npm run backup -- run      # sauvegarde avant toute mise à jour
-sudo -u carto git pull
-sudo -u carto npm ci
-sudo -u carto npm run db:migrate
-sudo -u carto npm run build
-sudo systemctl restart carto
-sudo -u carto npm run doctor
+cd /opt/macartepro
+sudo -u macartepro npm run backup -- run   # sauvegarde AVANT la mise à jour
+sudo -u macartepro git pull                # récupère la nouvelle version
+sudo -u macartepro npm ci                  # met à jour les dépendances
+sudo -u macartepro npm run db:migrate      # applique les nouvelles migrations
+sudo -u macartepro npm run build           # recompile
+sudo systemctl restart macartepro          # redémarre l'application
+sudo -u macartepro npm run doctor          # vérifie
 ```
 
-Les migrations sont versionnées dans `drizzle/` et s'appliquent dans l'ordre. En cas de problème après une mise à jour, revenez au commit précédent (`git checkout <commit>`). Si une migration a modifié la base, restaurez la sauvegarde faite juste avant, comme décrit dans [SAUVEGARDE.md](SAUVEGARDE.md).
-
-### Changer de domaine
-
-1. Faites pointer le nouveau domaine vers le serveur et ajoutez-le au `Caddyfile`.
-2. Gardez une redirection permanente depuis l'ancien domaine : les QR codes déjà imprimés continueront de fonctionner.
-3. Modifiez le domaine public dans `/admin/reglages`, puis `APP_URL` au déploiement suivant, et redémarrez.
+En cas de souci après mise à jour, revenez à la version précédente (`git checkout <commit>`) ;
+si la base a changé, restaurez la sauvegarde faite juste avant (voir [SAUVEGARDE.md](SAUVEGARDE.md)).
 
 ---
 
 ## 4. Dépannage
 
-| Symptôme | Cause probable | Solution |
+| Symptôme | Cause probable | Que faire |
 |---|---|---|
-| `npm run doctor` : « Migrations x/y » | migrations non appliquées | `npm run db:migrate` |
-| Aucun email reçu | `EMAIL_MODE=log` ou SMTP refusé | `npm run doctor` teste la connexion SMTP ; vérifier SPF/DKIM du domaine expéditeur |
-| « pg_dump introuvable » ou version inférieure au serveur | client PostgreSQL absent ou trop ancien | `sudo apt install postgresql-client-<version du serveur>` |
-| Connexion impossible après inscription | adresse non confirmée | lien dans l'email (en développement : `/dev/emails`) |
-| `/admin` renvoie vers `/admin/securite` | double authentification non activée | l'activer avec une application TOTP |
-| Paiements refusés au démarrage | prix encore marqués « démonstration » ou clé live sans `STRIPE_ALLOW_LIVE=true` | `/admin/plans` et `.env` |
-| Les cartes ne s'affichent plus | essai terminé, abonnement échu ou carte suspendue | comportement voulu : voir [ETATS-ABONNEMENT.md](ETATS-ABONNEMENT.md) |
-| Bandeau rouge « Sauvegardes » dans `/admin` | aucune sauvegarde réussie récente | `/admin/sauvegardes` affiche l'erreur ; vérifier `systemctl status carto-jobs.timer` |
-| Journaux de l'application | — | `journalctl -u carto -f` et `journalctl -u carto-jobs` |
+| `command not found` (node, psql, git) | prérequis non installés | reprendre l'étape 1 |
+| `npm run doctor` affiche « Migrations x/y » | tables non à jour | `npm run db:migrate` |
+| Connexion impossible après inscription | email non confirmé | ouvrir le lien (en local : `/dev/emails`) |
+| `/admin` renvoie vers `/admin/securite` | double authentification non activée | l'activer avec une application d'authentification (TOTP) |
+| Aucun email reçu | `EMAIL_MODE=log` ou SMTP refusé | en production mettre `EMAIL_MODE=smtp` ; vérifier SPF/DKIM |
+| « pg_dump introuvable » | client PostgreSQL manquant/ancien | `sudo apt install postgresql-client-<version du serveur>` |
+| Paiements refusés au démarrage | prix encore en « démonstration » ou clé live sans `STRIPE_ALLOW_LIVE=true` | `/admin/plans` et `.env` |
+| Bandeau rouge « Sauvegardes » dans `/admin` | aucune sauvegarde récente | `/admin/sauvegardes` ; `systemctl status macartepro-jobs.timer` |
+| Voir les journaux du serveur | — | `journalctl -u macartepro -f` et `journalctl -u macartepro-jobs` |
+
+Besoin d'aide sur une fonctionnalité précise ? Voir le [guide des fonctionnalités](FONCTIONNALITES.md).
