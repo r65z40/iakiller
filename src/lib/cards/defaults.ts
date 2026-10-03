@@ -1,12 +1,6 @@
 import { blockId } from "./client-ids";
-import {
-  CURRENT_SCHEMA_VERSION,
-  type BlockType,
-  type CardBlock,
-  type CardDocument,
-  type CardTheme,
-  type TemplateId,
-} from "./document";
+import { CURRENT_SCHEMA_VERSION } from "./constants";
+import type { BlockType, CardBlock, CardDocument, CardTheme, TemplateId } from "./document";
 
 export const BLOCK_LIBRARY: { type: BlockType; label: string; description: string }[] = [
   { type: "actions", label: "Boutons de contact", description: "Appeler, envoyer un email, ajouter aux contacts" },

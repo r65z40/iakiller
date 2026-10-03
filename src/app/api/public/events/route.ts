@@ -1,6 +1,7 @@
 import { getSettings } from "@/lib/settings/store";
 import { headers as nextHeaders } from "next/headers";
 import { and, eq } from "drizzle-orm";
+import { getSessionCookie } from "better-auth/cookies";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { recordEvent } from "@/lib/analytics/service";
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
   const h = await nextHeaders();
   // Visite interne : membre connecté de l'organisation ou personnel de la plateforme.
   let isInternal = false;
-  const session = await auth.api.getSession({ headers: h }).catch(() => null);
+  // Sans cookie de session (cas de presque tous les visiteurs), aucune lecture en base.
+  const session = getSessionCookie(h) ? await auth.api.getSession({ headers: h }).catch(() => null) : null;
   if (session && typeof body.token === "string") {
     const [u] = await db.select({ role: schema.user.platformRole }).from(schema.user).where(eq(schema.user.id, session.user.id));
     if (u?.role) isInternal = true;

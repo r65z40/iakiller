@@ -141,9 +141,3 @@ export async function exportRows(actor: Actor, filter: StatsFilter) {
     .limit(50000);
 }
 
-/** Bornes d'une période en jours civils Europe/Paris. */
-export function parisRange(days: number, endExclusive = new Date()) {
-  const to = endExclusive;
-  const from = new Date(to.getTime() - days * 86400_000);
-  return { from, to };
-}

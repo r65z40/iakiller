@@ -28,6 +28,21 @@
 
 Limite : Apple Wallet et Google Wallet n'ont pas pu être essayés avec de vrais identifiants ni sur un vrai téléphone.
 
+## Audit de performance (quatrième lot)
+
+Mesures sur la page publique d'une carte (build de production, profil mobile) :
+
+| Point | Avant | Après |
+|---|---|---|
+| JavaScript téléchargé par le visiteur | 870 Ko (9 fichiers) | 484 Ko (8 fichiers) : la bibliothèque de validation (zod, ~400 Ko) n'est plus envoyée au navigateur |
+| Résolution de la carte (droits, version, charte) | 2 fois par affichage (métadonnées + page) | 1 fois, mémorisée le temps de la requête ; version et charte lues en parallèle |
+| Images (avatar, bannière, galerie) | original jusqu'à 1 600 px | variantes 160 à 960 px (`/m/{id}?w=`) choisies par le navigateur (`srcset`), mises en cache en mémoire ; contrôle d'accès inchangé à chaque requête |
+| Réception des mesures d'audience | lecture de session en base à chaque événement | aucune lecture sans cookie de session (cas des visiteurs) |
+| Téléchargement du QR personnalisé | rendu et décodage à deux tailles à chaque export | vérification mémorisée par (adresse, couleur, logo) |
+| Base de données | contrôle d'accès des médias publics en parcours séquentiel | index GIN sur `card_version.media_ids`, index `lead(card_id, created_at)` et `organization(created_by_id)` (migration `0004_perf_indexes`) |
+
+Nettoyage : dépendance inutilisée `sanitize-html` retirée, fonctions mortes supprimées, constantes des cartes séparées du schéma de validation (`cards/constants.ts`). Tests ajoutés : `tests/unit/media-variants.test.ts`.
+
 ## Couverture des critères de validation
 
 | # | Critère | Preuve |
@@ -49,7 +64,7 @@ Limite : Apple Wallet et Google Wallet n'ont pas pu être essayés avec de vrais
 | 15 | Prestation sans droit d'abonnement ; validation avant publication | `billing.test.ts` « création accompagnée » |
 | 16 | Désactivation → caches et fichiers | médias servis uniquement pour une version publiée et accessible ; pages dynamiques ; cache de 5 minutes documenté |
 | 17 | Fichiers excessifs, faux types, contenus actifs, URL dangereuses | `media-brand.test.ts`, `vcard-urls.test.ts`, `cards.test.ts` (javascript:) |
-| 18 | Tests automatisés et E2E | 66 tests Vitest sur PostgreSQL réel, 5 parcours Playwright |
+| 18 | Tests automatisés et E2E | 90 tests Vitest sur PostgreSQL réel, 6 parcours Playwright |
 
 ## Limites réelles
 

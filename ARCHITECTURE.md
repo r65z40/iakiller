@@ -84,6 +84,8 @@ Suppressions en cascade : la suppression physique d'une organisation entraîne c
 
 Les pages de carte sont rendues dynamiquement (`force-dynamic`) et la redirection du QR est envoyée avec `no-store` : la désactivation est immédiate. Les médias publics ont un cache navigateur de 5 minutes, sans cache partagé (`CDN-Cache-Control: no-store`). Si un CDN est ajouté, il faut purger les adresses `/m/*`, `/{org}/*` et `/r/*` au retrait d'une carte, à la fin d'un droit ou lors d'une suspension.
 
+Les variantes réduites des images publiques (`/m/{id}?w=160|320|640|960`) sont gardées en mémoire par instance (48 Mo maximum, les plus anciennes sont évincées). Elles suivent exactement le même contrôle d'accès que l'original, vérifié avant toute lecture du cache.
+
 ## Environnements
 
 | Environnement | Base | Stripe | Emails | Stockage |

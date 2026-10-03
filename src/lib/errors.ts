@@ -19,21 +19,3 @@ export class DomainError extends Error {
   }
 }
 
-export function httpStatus(code: DomainErrorCode): number {
-  switch (code) {
-    case "forbidden":
-      return 403;
-    case "not_found":
-      return 404;
-    case "conflict":
-    case "slug_taken":
-      return 409;
-    case "quota_exceeded":
-    case "entitlement":
-      return 402;
-    case "not_configured":
-      return 503;
-    default:
-      return 400;
-  }
-}

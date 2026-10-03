@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { resolvePublicCard } from "@/lib/cards/public";
+import { resolvePublicCardForRequest } from "@/lib/cards/public";
 import { collectMediaIds } from "@/lib/cards/document";
 import { buildMediaMap } from "@/lib/cards/media-map";
 import { CardView } from "@/components/card/CardView";
@@ -15,7 +15,7 @@ type Props = PageProps<"/[org]/[person]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { org, person } = await params;
-  const result = await resolvePublicCard(org, person);
+  const result = await resolvePublicCardForRequest(org, person);
   if (result.kind !== "ok") return { title: "Carte indisponible", robots: { index: false, follow: false } };
   const { identity } = result.document;
   const name = [identity.firstName, identity.lastName].filter(Boolean).join(" ") || identity.company;
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PublicCardPage({ params, searchParams }: Props) {
   const { org, person } = await params;
   const sp = await searchParams;
-  const result = await resolvePublicCard(org, person);
+  const result = await resolvePublicCardForRequest(org, person);
   if (result.kind === "redirect") redirect(result.path);
   if (result.kind !== "ok") notFound();
 

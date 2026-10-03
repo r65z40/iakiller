@@ -161,15 +161,6 @@ export async function requireOrgAction(permission?: Permission): Promise<OrgCont
   return ctx;
 }
 
-export function auditActor(ctx: OrgContext) {
-  return {
-    organizationId: ctx.organization.id,
-    actorUserId: ctx.user.id,
-    actorType: ctx.supportGrantId ? ("staff" as const) : ("user" as const),
-    supportGrantId: ctx.supportGrantId,
-  };
-}
-
 /**
  * Espace plateforme : rôle plateforme attribué hors inscription (script dédié) ET double
  * authentification activée. Sans MFA, l'accès est redirigé vers son activation.

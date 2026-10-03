@@ -6,9 +6,10 @@ import {
   Phone, Play, Smartphone, Star, Store, UserPlus,
 } from "lucide-react";
 import type { CardBlock, CardDocument, ContactKind } from "@/lib/cards/document";
-import { FONTS } from "@/lib/cards/document";
+import { FONTS } from "@/lib/cards/constants";
 import { normalizePhone, normalizeWebUrl, toInternationalDigits, videoEmbedUrl } from "@/lib/validation/urls";
 import { RichText } from "./RichText";
+import { publicSrcSet } from "@/lib/media/variant-url";
 
 export interface MediaInfo {
   url: string;
@@ -243,6 +244,8 @@ function Avatar({ src, alt, size, rounded, className = "" }: { src?: string; alt
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
+      srcSet={publicSrcSet(src)}
+      sizes={`${size}px`}
       alt={alt}
       width={size}
       height={size}
@@ -277,6 +280,8 @@ function Header({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={bannerUrl}
+          srcSet={publicSrcSet(bannerUrl, banner.mediaId ? media[banner.mediaId]?.width : null)}
+          sizes="(min-width: 400px) 400px, 100vw"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           style={{ objectPosition: `${banner.focalX}% ${banner.focalY}%`, filter: banner.blur ? `blur(${banner.blur}px)` : undefined, transform: banner.blur ? "scale(1.08)" : undefined }}
@@ -632,7 +637,7 @@ function Block(props: {
               <li key={item.id} className={i === 0 && items.length % 2 === 1 ? "col-span-2" : ""}>
                 <figure>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={media[item.mediaId].url} alt={item.caption || ""} loading="lazy" className="aspect-[4/3] w-full rounded-[var(--radius)] object-cover" />
+                  <img src={media[item.mediaId].url} srcSet={publicSrcSet(media[item.mediaId].url, media[item.mediaId].width)} sizes={i === 0 && items.length % 2 === 1 ? "(min-width: 400px) 360px, 92vw" : "(min-width: 400px) 180px, 46vw"} alt={item.caption || ""} loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-[var(--radius)] object-cover" />
                   {item.caption && <figcaption className="mt-1 text-[12px] text-[var(--c-muted)]">{item.caption}</figcaption>}
                 </figure>
               </li>

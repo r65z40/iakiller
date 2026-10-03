@@ -64,8 +64,8 @@ Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (pr
 ```bash
 npm run typecheck
 npm run lint
-npm test                 # 66 tests unitaires et d'intégration (base cartes_test requise)
-npm run test:e2e         # 5 parcours Playwright (base cartes_e2e requise)
+npm test                 # 90 tests unitaires et d'intégration (base cartes_test requise)
+npm run test:e2e         # 6 parcours Playwright (base cartes_e2e requise)
 npm run build
 ```
 

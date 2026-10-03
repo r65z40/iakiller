@@ -142,7 +142,7 @@ export const organization = pgTable("organization", {
   purgedAt: ts("purged_at"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-});
+}, (t) => [index("organization_created_by_idx").on(t.createdById)]);
 
 export const membership = pgTable(
   "membership",
@@ -295,7 +295,11 @@ export const cardVersion = pgTable(
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("card_version_card_number_uq").on(t.cardId, t.number)],
+  (t) => [
+    uniqueIndex("card_version_card_number_uq").on(t.cardId, t.number),
+    // Contrôle d'accès des médias publics (media_ids @> '["id"]').
+    index("card_version_media_ids_gin").using("gin", t.mediaIds.op("jsonb_path_ops")),
+  ],
 );
 
 /**
@@ -609,6 +613,7 @@ export const lead = pgTable(
   (t) => [
     index("lead_org_time_idx").on(t.organizationId, t.createdAt),
     index("lead_dedupe_idx").on(t.dedupeHash, t.createdAt),
+    index("lead_card_time_idx").on(t.cardId, t.createdAt),
   ],
 );
 

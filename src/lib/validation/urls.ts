@@ -22,10 +22,6 @@ export function normalizeWebUrl(input: string): string | null {
   return url.toString();
 }
 
-export function isSafeWebUrl(input: string): boolean {
-  return normalizeWebUrl(input) !== null;
-}
-
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[^\s@<>()[\]\\,;:"]{2,}$/;
 
 export function isValidEmail(input: string): boolean {

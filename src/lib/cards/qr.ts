@@ -97,13 +97,30 @@ export async function verifyQrStyle(url: string, style: QrStyle, logo: Buffer | 
   return { ok: true as const };
 }
 
+/**
+ * Résultat de vérification mémorisé : le rendu et le décodage à deux tailles coûtent
+ * plusieurs dizaines de millisecondes. Un média étant immuable (un recadrage crée un
+ * nouveau média), le couple (adresse, couleur, logo) suffit à identifier le résultat.
+ */
+const verified = new Map<string, boolean>();
+async function verifiedStyle(url: string, style: QrStyle, logoId: string | null, logo: Buffer | null) {
+  if (!logo && style.dark.toUpperCase() === DEFAULT_QR_STYLE.dark.toUpperCase()) return { ok: true };
+  const key = `${url}|${style.dark.toUpperCase()}|${logoId ?? ""}`;
+  const known = verified.get(key);
+  if (known !== undefined) return { ok: known };
+  const { ok } = await verifyQrStyle(url, style, logo);
+  if (verified.size >= 1000) verified.delete(verified.keys().next().value!);
+  verified.set(key, ok);
+  return { ok };
+}
+
 /** QR d'une carte : style enregistré, revérifié ; repli sur le QR standard en cas de doute. */
 export async function cardQr(card: typeof schema.card.$inferSelect, format: "png" | "svg") {
   const url = qrTargetUrl(card.publicToken);
   const style = card.qrStyle ?? DEFAULT_QR_STYLE;
   const logoId = await resolveLogoId(card, style.logo);
   const logo = logoId ? await logoPng(card.organizationId, logoId, 256) : null;
-  const check = style === DEFAULT_QR_STYLE ? { ok: true } : await verifyQrStyle(url, style, logo);
+  const check = await verifiedStyle(url, style, logoId, logo);
   const effective = check.ok ? style : DEFAULT_QR_STYLE;
   const effectiveLogo = check.ok ? logo : null;
   return format === "png" ? await renderQrPng(url, effective, effectiveLogo) : await renderQrSvg(url, effective, effectiveLogo);
