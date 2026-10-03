@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: { absolute: [name, identity.company && name !== identity.company ? identity.company : null].filter(Boolean).join(" – ") },
     description: [identity.jobTitle, identity.company].filter(Boolean).join(" · ") || undefined,
     robots: result.organization.allowIndexing ? { index: true, follow: false } : { index: false, follow: false },
+    openGraph: { type: "profile", title: name, description: [identity.jobTitle, identity.company].filter(Boolean).join(" · ") || undefined },
   };
 }
 

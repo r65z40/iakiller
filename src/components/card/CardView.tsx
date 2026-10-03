@@ -666,6 +666,38 @@ function Block(props: {
       );
     }
 
+    case "reviews": {
+      if (!block.readUrl && !block.writeUrl && mode === "public") return null;
+      const platform = block.platform === "google" ? "Google" : block.platformName || "la plateforme d'avis";
+      return (
+        <Section>
+          <SectionTitle>{block.title}</SectionTitle>
+          {block.intro && <p className="mb-3 text-[14px] text-[var(--c-muted)]">{block.intro}</p>}
+          {!block.readUrl && !block.writeUrl && <p className="text-[13px] text-[var(--c-muted)]">Ajoutez le lien de votre fiche d&apos;avis.</p>}
+          <div className="grid gap-2.5">
+            {block.readUrl && (
+              <a href={block.readUrl} {...linkProps(mode, true)} onClickCapture={() => track("click_reviews", block.platform)}
+                className="flex min-h-14 items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--c-soft-border)] bg-[var(--c-soft)] px-4 py-3">
+                <span className="min-w-0">
+                  <span className="block text-[14px] font-bold text-[var(--c-primary)]">Lire les avis</span>
+                  <span className="block truncate text-[12px] text-[var(--c-muted)]">Sur {platform}</span>
+                </span>
+                <LinkIconBadge icon="star" />
+              </a>
+            )}
+            {block.writeUrl && (
+              <a href={block.writeUrl} {...linkProps(mode, true)} onClickCapture={() => track("click_review_write", block.platform)}
+                className={`flex min-h-12 items-center justify-center gap-2 rounded-[var(--radius)] border-[length:var(--border-w)] px-3 text-[14px] font-bold ${buttonClasses(theme.buttonStyle, false)}`}>
+                <Star size={16} aria-hidden />
+                Laisser un avis sur {platform}
+              </a>
+            )}
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--c-muted)]">Les avis sont publiés et modérés par {platform}, pas sur cette carte.</p>
+        </Section>
+      );
+    }
+
     case "appointment":
       if (!block.url && mode === "public") return null;
       return (

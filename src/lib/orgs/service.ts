@@ -1,5 +1,5 @@
-import { and, eq, ne } from "drizzle-orm";
-import { db, schema } from "@/lib/db";
+import { and, eq, isNotNull, ne, or, sql } from "drizzle-orm";
+import { db, schema, type Tx } from "@/lib/db";
 import { newId } from "@/lib/ids";
 import { DomainError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
@@ -30,8 +30,22 @@ export async function suggestOrgSlug(name: string) {
 }
 
 /**
- * Crée une organisation et démarre son essai (proposition : essai déclenché à la création
- * de l'organisation, email vérifié obligatoire, un essai par organisation).
+ * Un utilisateur a-t-il déjà bénéficié d'un essai ? (organisation créée ou possédée avec
+ * un essai démarré, y compris supprimée depuis).
+ */
+export async function hasUsedTrial(userId: string, client: Tx | typeof db = db): Promise<boolean> {
+  const [row] = await client
+    .select({ id: schema.organization.id })
+    .from(schema.organization)
+    .leftJoin(schema.membership, and(eq(schema.membership.organizationId, schema.organization.id), eq(schema.membership.userId, userId), eq(schema.membership.role, "owner")))
+    .where(and(isNotNull(schema.organization.trialStartedAt), or(eq(schema.organization.createdById, userId), isNotNull(schema.membership.id))))
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * Crée une organisation. L'essai gratuit n'est accordé qu'une fois par utilisateur :
+ * une organisation supplémentaire démarre sans essai (souscription nécessaire pour publier).
  */
 export async function createOrganization(
   user: { id: string; emailVerified: boolean },
@@ -47,19 +61,23 @@ export async function createOrganization(
   if (!(await orgSlugAvailable(slug))) throw new DomainError("slug_taken", "Cette adresse est déjà prise.");
 
   const id = newId();
-  const trialEndsAt = new Date(now.getTime() + trialRules.durationHours * 3600 * 1000);
+  let trial = false;
   try {
     await db.transaction(async (tx) => {
-      await tx.insert(schema.organization).values({ id, name, slug, trialStartedAt: now, trialEndsAt, createdById: user.id });
+      // Verrou sur l'utilisateur : deux créations simultanées ne peuvent pas obtenir deux essais.
+      await tx.execute(sql`select id from ${schema.user} where id = ${user.id} for update`);
+      trial = !(await hasUsedTrial(user.id, tx));
+      const trialEndsAt = trial ? new Date(now.getTime() + trialRules.durationHours * 3600 * 1000) : null;
+      await tx.insert(schema.organization).values({ id, name, slug, trialStartedAt: trial ? now : null, trialEndsAt, createdById: user.id });
       await tx.insert(schema.membership).values({ id: newId(), organizationId: id, userId: user.id, role: "owner", canManageBilling: true });
       await tx.insert(schema.brandSettings).values({ organizationId: id, companyName: name });
-      await audit({ organizationId: id, actorUserId: user.id, actorType: "user", action: "org.create", targetType: "organization", targetId: id, metadata: { trialEndsAt: trialEndsAt.toISOString() } }, tx);
+      await audit({ organizationId: id, actorUserId: user.id, actorType: "user", action: "org.create", targetType: "organization", targetId: id, metadata: { trial, trialEndsAt: trialEndsAt?.toISOString() ?? null } }, tx);
     });
   } catch (err) {
     if (String((err as { code?: string }).code) === "23505") throw new DomainError("slug_taken", "Cette adresse est déjà prise.");
     throw err;
   }
-  return { id, slug };
+  return { id, slug, trial };
 }
 
 export async function updateOrganization(actor: Actor, input: { name?: string; slug?: string; allowIndexing?: boolean }) {

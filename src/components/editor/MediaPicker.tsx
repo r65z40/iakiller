@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { FileText, ImagePlus, Upload, X } from "lucide-react";
+import { CropButton } from "./CropDialog";
 
 export interface LibraryItem {
   id: string;
@@ -52,6 +53,7 @@ export function MediaPicker({
   label,
   allowNone = true,
   disabled,
+  cropAspect,
 }: {
   kind: "image" | "document";
   library: LibraryItem[];
@@ -61,6 +63,8 @@ export function MediaPicker({
   label: string;
   allowNone?: boolean;
   disabled?: boolean;
+  /** Rapport largeur/hauteur proposé pour le recadrage (images uniquement). */
+  cropAspect?: number;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -86,6 +90,9 @@ export function MediaPicker({
           <button type="button" disabled={disabled} onClick={() => dialog.current?.showModal()} className="min-h-9 rounded-lg px-3 text-sm font-semibold ring-1 ring-line hover:bg-surface disabled:opacity-50">
             {current ? "Changer" : "Choisir"}
           </button>
+          {current && kind === "image" && cropAspect && !disabled && (
+            <CropButton item={current} aspect={cropAspect} label={label} onCropped={(item) => { onUploaded(item); onChange(item.id); }} />
+          )}
           {current && allowNone && (
             <button type="button" disabled={disabled} onClick={() => onChange(null)} className="min-h-9 rounded-lg px-3 text-sm text-muted hover:bg-surface disabled:opacity-50">Retirer</button>
           )}

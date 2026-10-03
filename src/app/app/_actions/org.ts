@@ -20,7 +20,7 @@ export async function createOrganizationAction(_prev: unknown, fd: FormData) {
     await setActiveCookie(org.id);
     return org;
   });
-  if (result.ok) redirect("/app?bienvenue=1");
+  if (result.ok) redirect(result.data.trial ? "/app?bienvenue=1" : "/app?bienvenue=sans-essai");
   return result;
 }
 

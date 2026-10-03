@@ -56,6 +56,7 @@ export default async function CardEditorPage({ params }: PageProps<"/app/cartes/
         publishedAt: card.publishedAt?.toISOString() ?? null,
         disabled: !!card.disabledAt,
         hasUnpublishedChanges: !card.publishedAt || card.draftUpdatedAt > card.publishedAt,
+        qrStyle: card.qrStyle ?? { dark: "#000000", logo: "none" },
       }}
       initialDoc={doc}
       library={media.map((m) => ({ id: m.id, kind: m.kind as "image" | "document", url: `/api/media/${m.id}`, name: m.originalName, sizeBytes: m.sizeBytes, width: m.width, height: m.height }))}

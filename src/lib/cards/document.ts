@@ -173,6 +173,17 @@ export const blockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     ...blockBase,
+    type: z.literal("reviews"),
+    title: short(60),
+    /** Plateforme d'avis ; aucun texte d'avis ni note n'est saisi dans la carte (pas de faux avis). */
+    platform: z.enum(["google", "other"]),
+    platformName: short(40),
+    readUrl: optionalWebUrl,
+    writeUrl: optionalWebUrl,
+    intro: short(200),
+  }),
+  z.object({
+    ...blockBase,
     type: z.literal("hours"),
     title: short(60),
     rows: z.array(z.object({ id, day: short(40), value: short(80) })).max(14),
@@ -266,6 +277,7 @@ export function publishProblems(doc: CardDocument): string[] {
     if (b.type === "links" && b.items.some((i) => !i.url || !i.title)) problems.push("Chaque lien doit avoir un titre et une adresse.");
     if (b.type === "social" && b.items.some((i) => !i.url)) problems.push("Chaque réseau doit avoir une adresse.");
     if (b.type === "appointment" && !b.url) problems.push("Le bloc rendez-vous doit avoir une adresse.");
+    if (b.type === "reviews" && !b.readUrl && !b.writeUrl) problems.push("Le bloc avis doit contenir au moins un lien (consulter ou laisser un avis).");
     if (b.type === "video" && (!b.provider || !b.videoId)) problems.push("Le bloc vidéo doit contenir une vidéo YouTube ou Vimeo.");
     if ((b.type === "gallery" || b.type === "documents") && b.items.some((i) => !i.mediaId)) problems.push("Chaque élément de galerie ou de document doit avoir un fichier.");
   }

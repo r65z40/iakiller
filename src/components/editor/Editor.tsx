@@ -1,20 +1,20 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
-import { AlertTriangle, Check, CloudOff, Loader2, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AlertTriangle, Check, CloudOff, Loader2, Monitor, Plus, Redo2, Smartphone, Undo2 } from "lucide-react";
 import type { CardBlock, CardDocument } from "@/lib/cards/document";
 import { BLOCK_LIBRARY, blockLabel, newBlock } from "@/lib/cards/defaults";
 import { blockId } from "@/lib/cards/client-ids";
 import { CardView, type MediaInfo } from "@/components/card/CardView";
 import { buttonClass } from "@/components/ui";
-import { publishCardAction, renameCardSlugAction, restoreVersionAction, setCardAssigneesAction, unpublishCardAction } from "@/app/app/_actions/cards";
+import { publishCardAction, renameCardSlugAction, setQrStyleAction, restoreVersionAction, setCardAssigneesAction, unpublishCardAction } from "@/app/app/_actions/cards";
 import { BlockList } from "./BlockList";
 import { BannerPanel, BlockPanel, IdentityPanel, ThemePanel, type LockState } from "./panels";
 import type { LibraryItem } from "./MediaPicker";
 import { useAutosave, type SaveStatus } from "./useAutosave";
 
 export interface EditorProps {
-  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean };
+  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean; qrStyle: { dark: string; logo: "none" | "card" | "brand" } };
   initialDoc: CardDocument;
   library: LibraryItem[];
   locks: LockState;
@@ -56,7 +56,15 @@ export function Editor(props: EditorProps) {
   const [publishing, startPublish] = useTransition();
   const autosave = useAutosave(props.card.id, props.card.revision);
 
-  const commit = useCallback(
+  const [device, setDevice] = useState<"phone" | "desktop">("phone");
+  // Historique d'annulation : les modifications rapprochées (frappe) forment une seule étape.
+  const past = useRef<CardDocument[]>([]);
+  const future = useRef<CardDocument[]>([]);
+  const lastPush = useRef(0);
+  const [historySize, setHistorySize] = useState({ undo: 0, redo: 0 });
+  const syncHistory = () => setHistorySize({ undo: past.current.length, redo: future.current.length });
+
+  const apply = useCallback(
     (next: CardDocument, nextTitle = title) => {
       setDoc(next);
       setUnpublished(true);
@@ -64,6 +72,59 @@ export function Editor(props: EditorProps) {
     },
     [autosave, title],
   );
+
+  const commit = useCallback(
+    (next: CardDocument, nextTitle = title) => {
+      const now = Date.now();
+      if (now - lastPush.current > 800 || past.current.length === 0) {
+        past.current = [...past.current.slice(-99), doc];
+      }
+      lastPush.current = now;
+      future.current = [];
+      syncHistory();
+      apply(next, nextTitle);
+    },
+    [apply, doc, title],
+  );
+
+  const undoChange = useCallback(() => {
+    const prev = past.current.pop();
+    if (!prev) return;
+    future.current = [...future.current, doc];
+    lastPush.current = 0;
+    syncHistory();
+    apply(prev);
+  }, [apply, doc]);
+
+  const redoChange = useCallback(() => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current = [...past.current, doc];
+    lastPush.current = 0;
+    syncHistory();
+    apply(next);
+  }, [apply, doc]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      // Dans un champ de saisie, l'annulation native du navigateur reste prioritaire.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undoChange();
+      } else if ((key === "z" && e.shiftKey) || key === "y") {
+        e.preventDefault();
+        redoChange();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undoChange, redoChange]);
+  const canUndo = historySize.undo > 0;
+  const canRedo = historySize.redo > 0;
 
   const updateBlock = (b: CardBlock) => commit({ ...doc, blocks: doc.blocks.map((x) => (x.id === b.id ? b : x)) });
 
@@ -204,7 +265,7 @@ export function Editor(props: EditorProps) {
     propsPanel = <ThemePanel theme={doc.theme} onChange={(theme) => commit({ ...doc, theme })} locks={props.locks} />;
   } else if (selection === "qr") {
     propsTitle = "QR code et partage";
-    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} />;
+    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} />;
   } else if (selection === "versions") {
     propsTitle = "Versions publiées";
     propsPanel = <VersionsPanel cardId={props.card.id} versions={props.versions} flush={autosave.flush} />;
@@ -232,6 +293,10 @@ export function Editor(props: EditorProps) {
                 {props.card.disabled && " · désactivée"}
               </span>
             </div>
+          </div>
+          <div className="flex items-center gap-1" role="group" aria-label="Historique des modifications">
+            <button type="button" onClick={undoChange} disabled={!canUndo} aria-keyshortcuts="Control+Z" title="Annuler (Ctrl+Z)" className={buttonClass("ghost", "sm")}><Undo2 size={16} aria-hidden /><span className="sr-only sm:not-sr-only">Annuler</span></button>
+            <button type="button" onClick={redoChange} disabled={!canRedo} aria-keyshortcuts="Control+Shift+Z" title="Rétablir (Ctrl+Maj+Z)" className={buttonClass("ghost", "sm")}><Redo2 size={16} aria-hidden /><span className="sr-only sm:not-sr-only">Rétablir</span></button>
           </div>
           {cardStatus === "published" && !props.card.disabled && (
             <a href={publicUrl} target="_blank" rel="noopener" className={buttonClass("secondary", "sm")}>Voir la carte publique</a>
@@ -273,8 +338,34 @@ export function Editor(props: EditorProps) {
           {leftPanel}
         </aside>
         <section className={`${mobileTab === "preview" ? "block" : "hidden"} p-4 lg:block lg:h-[calc(100dvh-90px)] lg:overflow-y-auto`} aria-label="Aperçu" style={{ background: doc.theme.pageBackground }}>
-          <p className="mb-3 text-center text-xs text-muted">Aperçu du brouillon · cliquez sur un élément pour le modifier</p>
-          <CardView doc={doc} media={mediaMap} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-3">
+            <div role="radiogroup" aria-label="Format de l'aperçu" className="inline-flex rounded-lg bg-white/80 p-1 ring-1 ring-line">
+              {([["phone", "Téléphone", Smartphone], ["desktop", "Ordinateur", Monitor]] as const).map(([id, label, Icon]) => (
+                <button key={id} type="button" role="radio" aria-checked={device === id} onClick={() => setDevice(id)}
+                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold ${device === id ? "bg-ink text-white" : "text-muted"}`}>
+                  <Icon size={14} aria-hidden />{label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted">Aperçu du brouillon · cliquez sur un élément pour le modifier</p>
+          </div>
+          {device === "phone" ? (
+            <div className="mx-auto w-[390px] max-w-full overflow-hidden rounded-[40px] border-[10px] border-ink bg-[var(--preview-bg)] shadow-xl" style={{ ["--preview-bg" as string]: doc.theme.pageBackground }}>
+              <div className="h-[720px] overflow-y-auto px-2 py-3">
+                <CardView doc={doc} media={mediaMap} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-[1100px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-line">
+              <div className="flex items-center gap-1.5 border-b border-line bg-surface px-3 py-2" aria-hidden>
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                <span className="ml-3 truncate rounded bg-white px-2 py-0.5 text-[11px] text-muted">{publicUrl}</span>
+              </div>
+              <div className="px-4 py-10" style={{ background: doc.theme.pageBackground }}>
+                <CardView doc={doc} media={mediaMap} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
+              </div>
+            </div>
+          )}
         </section>
         <aside className={`${mobileTab === "props" ? "block" : "hidden"} border-l border-line bg-white p-4 lg:block lg:h-[calc(100dvh-90px)] lg:overflow-y-auto`} aria-label="Propriétés">
           <h2 className="mb-4 text-base font-bold">{propsTitle}</h2>
@@ -285,12 +376,41 @@ export function Editor(props: EditorProps) {
   );
 }
 
-function QrPanel({ cardId, shortUrl, publicUrl, published }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean }) {
+function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" } }) {
   const [copied, setCopied] = useState(false);
+  const [style, setStyle] = useState(initialStyle);
+  const [version, setVersion] = useState(0);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
   return (
     <div className="space-y-4 text-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/app/cartes/${cardId}/qr?format=svg`} alt={`QR code menant à ${shortUrl}`} className="mx-auto w-48 rounded-lg bg-white p-2 ring-1 ring-line" />
+      <img src={`/app/cartes/${cardId}/qr?format=svg&v=${version}`} alt={`QR code menant à ${shortUrl}`} className="mx-auto w-48 rounded-lg bg-white p-2 ring-1 ring-line" />
+      <fieldset className="space-y-3 rounded-lg border border-line p-3">
+        <legend className="px-1 font-semibold">Personnaliser</legend>
+        <label className="flex items-center justify-between gap-2">
+          <span>Couleur des modules</span>
+          <span className="flex items-center gap-2">
+            <input type="color" value={style.dark} onChange={(e) => setStyle({ ...style, dark: e.target.value.toUpperCase() })} aria-label="Couleur du QR code" className="h-9 w-11 rounded border border-line p-0.5" />
+            <code className="text-xs">{style.dark}</code>
+          </span>
+        </label>
+        <label className="block">
+          Logo au centre
+          <select value={style.logo} onChange={(e) => setStyle({ ...style, logo: e.target.value as typeof style.logo })} className="mt-1 block min-h-10 w-full rounded-lg border border-line px-2">
+            <option value="none">Aucun</option>
+            <option value="card">Logo de la carte</option>
+            <option value="brand">Logo de l&apos;entreprise</option>
+          </select>
+        </label>
+        <button type="button" disabled={pending} className={buttonClass("secondary", "sm")} onClick={() => start(async () => {
+          const r = await setQrStyleAction(cardId, style);
+          setMsg(r.ok ? { ok: true, text: r.data } : { ok: false, text: r.error });
+          if (r.ok) setVersion((v) => v + 1);
+        })}>{pending ? "Vérification…" : "Vérifier et enregistrer"}</button>
+        <p className="text-xs text-muted">Avant l&apos;enregistrement, le QR est généré puis décodé automatiquement à deux tailles ; une couleur trop claire ou un logo gênant la lecture sont refusés.</p>
+        {msg && <p role={msg.ok ? "status" : "alert"} className={`text-xs font-semibold ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</p>}
+      </fieldset>
       <div className="flex gap-2">
         <a href={`/app/cartes/${cardId}/qr?format=png&download=1`} className={buttonClass("primary", "sm")}>Télécharger PNG</a>
         <a href={`/app/cartes/${cardId}/qr?format=svg&download=1`} className={buttonClass("secondary", "sm")}>Télécharger SVG</a>

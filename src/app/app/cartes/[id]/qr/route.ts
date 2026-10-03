@@ -1,9 +1,9 @@
 import { getSettings } from "@/lib/settings/store";
 import { getOrgContext } from "@/lib/context";
 import { getCardForActor } from "@/lib/cards/service";
-import { qrPng, qrSvg, qrTargetUrl } from "@/lib/cards/qr";
+import { cardQr } from "@/lib/cards/qr";
 
-/** Export du QR code d'une carte, réservé aux membres autorisés. */
+/** Export du QR code d'une carte (style personnalisé vérifié), réservé aux membres autorisés. */
 export async function GET(req: Request, ctx: RouteContext<"/app/cartes/[id]/qr">) {
   await getSettings();
   const { id } = await ctx.params;
@@ -17,11 +17,9 @@ export async function GET(req: Request, ctx: RouteContext<"/app/cartes/[id]/qr">
   }
   const params = new URL(req.url).searchParams;
   const format = params.get("format") === "png" ? "png" : "svg";
-  const download = params.has("download");
-  const url = qrTargetUrl(card.publicToken);
-  const filename = `qr-${card.slug}.${format}`;
   const headers: Record<string, string> = { "Cache-Control": "private, no-store" };
-  if (download) headers["Content-Disposition"] = `attachment; filename="${filename}"`;
-  if (format === "png") return new Response(new Uint8Array(await qrPng(url)), { headers: { ...headers, "Content-Type": "image/png" } });
-  return new Response(await qrSvg(url), { headers: { ...headers, "Content-Type": "image/svg+xml", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'" } });
+  if (params.has("download")) headers["Content-Disposition"] = `attachment; filename="qr-${card.slug}.${format}"`;
+  const out = await cardQr(card, format);
+  if (format === "png") return new Response(new Uint8Array(out as Buffer), { headers: { ...headers, "Content-Type": "image/png" } });
+  return new Response(out as string, { headers: { ...headers, "Content-Type": "image/svg+xml", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'" } });
 }

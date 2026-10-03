@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireOrgAction } from "@/lib/context";
 import { run } from "@/lib/action-result";
+import { DomainError } from "@/lib/errors";
 import * as cards from "@/lib/cards/service";
 import { TEMPLATES, type TemplateId } from "@/lib/cards/document";
 
@@ -75,4 +76,36 @@ export async function setCardAssigneesAction(cardId: string, userIds: string[]) 
 }
 export async function restoreVersionAction(cardId: string, versionId: string) {
   return run(async () => cards.restoreVersion(await requireOrgAction(), cardId, versionId));
+}
+
+export async function setQrStyleAction(cardId: string, style: { dark: string; logo: "none" | "card" | "brand" }) {
+  return run(async () => {
+    const { setCardQrStyle } = await import("@/lib/cards/qr");
+    await setCardQrStyle(await requireOrgAction(), cardId, style);
+    return "QR code enregistré : la lecture a été vérifiée.";
+  });
+}
+
+export async function previewImportAction(csv: string) {
+  return run(async () => {
+    const ctx = await requireOrgAction("cards.create");
+    const { mapRows, parseCsv } = await import("@/lib/cards/import");
+    if (csv.length > 2_000_000) throw new DomainError("invalid", "Fichier trop volumineux (2 Mo maximum).");
+    const mapped = mapRows(parseCsv(csv));
+    if (mapped.error) throw new DomainError("invalid", mapped.error);
+    const { listCardsForActor } = await import("@/lib/cards/service");
+    const active = (await listCardsForActor(ctx)).length;
+    return { rows: mapped.rows, unknownColumns: mapped.unknownColumns, remaining: Math.max(0, ctx.entitlement.quotas.cards - active), canPublish: ctx.entitlement.canPublish };
+  });
+}
+
+export async function runImportAction(csv: string, opts: { template: string; invite: boolean; publish: boolean }) {
+  return run(async () => {
+    const ctx = await requireOrgAction("cards.create");
+    const { runImport } = await import("@/lib/cards/import");
+    if (csv.length > 2_000_000) throw new DomainError("invalid", "Fichier trop volumineux (2 Mo maximum).");
+    const report = await runImport(ctx, csv, { template: (TEMPLATES as readonly string[]).includes(opts.template) ? (opts.template as TemplateId) : "classique", invite: opts.invite, publish: opts.publish }, ctx.user.name);
+    revalidatePath("/app/cartes");
+    return report;
+  });
 }

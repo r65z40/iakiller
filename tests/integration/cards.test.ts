@@ -190,3 +190,21 @@ describe("isolation entre organisations et rôles", () => {
     await expect(saveDraft(b.actor, c.id, { revision: row.draftRevision, document: doc })).rejects.toMatchObject({ code: "invalid" });
   });
 });
+
+describe("essai unique par utilisateur", () => {
+  beforeEach(resetDb);
+
+  it("la deuxième organisation d'un même utilisateur démarre sans essai, même en parallèle", async () => {
+    const { createOrganization } = await import("@/lib/orgs/service");
+    const { loadEntitlement } = await import("@/lib/billing/load");
+    const { createUser } = await import("../helpers");
+    const u = await createUser();
+    const results = await Promise.all([createOrganization(u, { name: "Première Org" }), createOrganization(u, { name: "Seconde Org" })]);
+    expect(results.filter((r) => r.trial)).toHaveLength(1);
+    const third = await createOrganization(u, { name: "Troisième Org" });
+    expect(third.trial).toBe(false);
+    const ent = await loadEntitlement(third.id);
+    expect(ent.publicAccess).toBe(false);
+    expect(ent.canEdit).toBe(true);
+  });
+});

@@ -18,6 +18,7 @@ export const BLOCK_LIBRARY: { type: BlockType; label: string; description: strin
   { type: "video", label: "Vidéo", description: "YouTube ou Vimeo, chargée au clic" },
   { type: "documents", label: "Documents PDF", description: "Plaquette, tarifs, fiche produit" },
   { type: "appointment", label: "Prise de rendez-vous", description: "Lien vers votre outil de réservation" },
+  { type: "reviews", label: "Avis clients", description: "Liens vers votre fiche d'avis (Google…)" },
   { type: "hours", label: "Horaires", description: "Jours et heures d'ouverture" },
   { type: "services", label: "Services", description: "Liste de prestations" },
   { type: "leadForm", label: "Formulaire de contact", description: "Recevez des demandes de prospects" },
@@ -46,6 +47,8 @@ export function newBlock(type: BlockType): CardBlock {
       return { ...base, type, title: "Vidéo", provider: null, videoId: "" };
     case "documents":
       return { ...base, type, title: "Documents", items: [] };
+    case "reviews":
+      return { ...base, type, title: "Avis clients", platform: "google", platformName: "", readUrl: "", writeUrl: "", intro: "Votre avis nous aide à progresser." };
     case "appointment":
       return { ...base, type, title: "Rendez-vous", label: "Prendre rendez-vous", url: "", note: "" };
     case "hours":

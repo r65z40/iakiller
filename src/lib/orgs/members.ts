@@ -120,6 +120,17 @@ export async function acceptInvitation(user: { id: string; email: string; emailV
       .insert(schema.membership)
       .values({ id: newId(), organizationId: found.invitation.organizationId, userId: user.id, role: found.invitation.role, canManageBilling: false })
       .onConflictDoNothing();
+    // Cartes préparées pour cette personne (import CSV) : attribution à l'arrivée.
+    const pending = await tx
+      .delete(schema.pendingCardAssignment)
+      .where(and(eq(schema.pendingCardAssignment.organizationId, found.invitation.organizationId), eq(schema.pendingCardAssignment.email, found.invitation.email.toLowerCase())))
+      .returning({ cardId: schema.pendingCardAssignment.cardId });
+    if (pending.length) {
+      await tx
+        .insert(schema.cardAssignment)
+        .values(pending.map((p) => ({ cardId: p.cardId, userId: user.id, organizationId: found.invitation.organizationId })))
+        .onConflictDoNothing();
+    }
     await audit({ organizationId: found.invitation.organizationId, actorUserId: user.id, actorType: "user", action: "member.join", metadata: { role: found.invitation.role } }, tx);
   });
   return found.organization;

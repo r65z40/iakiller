@@ -220,6 +220,8 @@ export const card = pgTable(
     status: text("status").notNull().default("draft"),
     title: text("title").notNull(),
     draft: jsonb("draft").$type<CardDocument>().notNull(),
+    /** Personnalisation du QR code (couleur, logo), validée par un test de lecture. */
+    qrStyle: jsonb("qr_style").$type<{ dark: string; logo: "none" | "card" | "brand" }>(),
     /** Incrémenté à chaque sauvegarde du brouillon ; sert à détecter les conflits. */
     draftRevision: integer("draft_revision").notNull().default(1),
     draftUpdatedAt: ts("draft_updated_at").notNull().defaultNow(),
@@ -255,6 +257,22 @@ export const cardAssignment = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.cardId, t.userId] }), index("card_assignment_user_idx").on(t.userId)],
+);
+
+/** Attribution différée : la carte sera attribuée à la personne invitée lorsqu'elle acceptera. */
+export const pendingCardAssignment = pgTable(
+  "pending_card_assignment",
+  {
+    cardId: text("card_id")
+      .notNull()
+      .references(() => card.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.cardId, t.email] }), index("pending_assignment_org_email_idx").on(t.organizationId, t.email)],
 );
 
 /** Instantanés immuables publiés ou sauvegardés explicitement. */

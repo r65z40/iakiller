@@ -15,6 +15,20 @@
       "when": 1790986787665,
       "tag": "0001_organization_purged_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790987854613,
+      "tag": "0002_card_qr_style",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790988004469,
+      "tag": "0003_pending_card_assignment",
+      "breakpoints": true
     }
   ]
 }

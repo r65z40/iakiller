@@ -192,9 +192,9 @@ export function IdentityPanel({ identity, onChange, locks, library, onUploaded }
       </div>
       <TextInput label="Fonction" value={identity.jobTitle} onChange={(v) => set("jobTitle", v)} placeholder="Ex. Responsable commerciale" />
       <TextInput label="Société" value={identity.company} onChange={(v) => set("company", v)} disabled={locks.company} />
-      <MediaPicker kind="image" label="Photo de profil" library={library} value={identity.photoMediaId} onChange={(v) => set("photoMediaId", v)} onUploaded={onUploaded} />
+      <MediaPicker kind="image" cropAspect={1} label="Photo de profil" library={library} value={identity.photoMediaId} onChange={(v) => set("photoMediaId", v)} onUploaded={onUploaded} />
       <Toggle label="Afficher la photo" checked={identity.showPhoto} onChange={(v) => set("showPhoto", v)} />
-      <MediaPicker kind="image" label="Logo" library={library} value={identity.logoMediaId} onChange={(v) => set("logoMediaId", v)} onUploaded={onUploaded} disabled={locks.logo} />
+      <MediaPicker kind="image" cropAspect={1} label="Logo" library={library} value={identity.logoMediaId} onChange={(v) => set("logoMediaId", v)} onUploaded={onUploaded} disabled={locks.logo} />
       <Toggle label="Afficher le logo" checked={identity.showLogo} onChange={(v) => set("showLogo", v)} />
     </div>
   );
@@ -204,7 +204,7 @@ export function BannerPanel({ banner, onChange, library, onUploaded }: { banner:
   const set = <K extends keyof CardBanner>(k: K, v: CardBanner[K]) => onChange({ ...banner, [k]: v });
   return (
     <div className="space-y-4">
-      <MediaPicker kind="image" label="Image de bannière" library={library} value={banner.mediaId} onChange={(v) => set("mediaId", v)} onUploaded={onUploaded} />
+      <MediaPicker kind="image" cropAspect={2.85} label="Image de bannière" library={library} value={banner.mediaId} onChange={(v) => set("mediaId", v)} onUploaded={onUploaded} />
       <p className="text-xs text-muted">Sans image, la bannière utilise un dégradé de la couleur principale. N&apos;utilisez que des photos dont vous détenez les droits.</p>
       <Range label="Hauteur" value={banner.height} min={80} max={240} onChange={(v) => set("height", v)} unit=" px" />
       <Range label="Point focal horizontal" value={banner.focalX} min={0} max={100} onChange={(v) => set("focalX", v)} unit=" %" />
@@ -316,7 +316,7 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
             create={() => ({ id: blockId(), mediaId: library.find((m) => m.kind === "image")?.id ?? "", caption: "" })}
             render={(item, update) => (
               <>
-                <MediaPicker kind="image" label="Photo" allowNone={false} library={library} value={item.mediaId || null} onChange={(v) => v && update({ mediaId: v })} onUploaded={onUploaded} />
+                <MediaPicker kind="image" cropAspect={4 / 3} label="Photo" allowNone={false} library={library} value={item.mediaId || null} onChange={(v) => v && update({ mediaId: v })} onUploaded={onUploaded} />
                 <TextInput label="Légende (facultatif)" value={item.caption} onChange={(v) => update({ caption: v })} maxLength={120} />
               </>
             )}
@@ -348,6 +348,20 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
             )}
           />
           {block.items.some((i) => !i.mediaId) && <p className="text-xs font-semibold text-danger">Choisissez un PDF pour chaque élément.</p>}
+        </div>
+      );
+    case "reviews":
+      return (
+        <div className="space-y-4">
+          {titleField}
+          <SelectInput label="Plateforme" value={block.platform} onChange={(v) => onChange({ ...block, platform: v })} options={[{ value: "google", label: "Google (fiche d'établissement)" }, { value: "other", label: "Autre plateforme" }]} />
+          {block.platform === "other" && <TextInput label="Nom de la plateforme" value={block.platformName} onChange={(v) => onChange({ ...block, platformName: v })} maxLength={40} placeholder="Ex. Trustpilot" />}
+          <TextInput label="Lien pour lire les avis" type="url" value={block.readUrl} onChange={(v) => onChange({ ...block, readUrl: v })} maxLength={2048} placeholder="https://" error={urlError(block.readUrl)}
+            hint={block.platform === "google" ? "Depuis votre fiche Google : « Avis » puis copier le lien de la page." : undefined} />
+          <TextInput label="Lien pour laisser un avis" type="url" value={block.writeUrl} onChange={(v) => onChange({ ...block, writeUrl: v })} maxLength={2048} placeholder="https://" error={urlError(block.writeUrl)}
+            hint={block.platform === "google" ? "Dans Google Business Profile : « Demander des avis » fournit ce lien." : undefined} />
+          <TextInput label="Phrase d'introduction (facultatif)" value={block.intro} onChange={(v) => onChange({ ...block, intro: v })} maxLength={200} />
+          <p className="text-xs text-muted">Pour garantir la sincérité des avis, la carte ne contient que des liens : aucun texte d&apos;avis ni note ne peut être saisi ici.</p>
         </div>
       );
     case "appointment":

@@ -21,6 +21,8 @@ export const EVENT_TYPES = {
   click_address: "Clic itinéraire",
   click_link: "Clic sur un lien",
   click_appointment: "Clic rendez-vous",
+  click_reviews: "Clic consulter les avis",
+  click_review_write: "Clic laisser un avis",
   video_play: "Lancement de vidéo",
   download_pdf: "Téléchargement de PDF",
   download_vcard: "Téléchargement de la fiche contact (vCard)",

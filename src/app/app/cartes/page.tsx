@@ -20,6 +20,7 @@ function statusBadge(card: { status: string; disabledAt: Date | null; adminSuspe
 
 export default async function CardsPage({ searchParams }: PageProps<"/app/cartes">) {
   const ctx = await requireOrgPage();
+  const canCreate = can(ctx, "cards.create");
   const sp = await searchParams;
   const showArchived = sp.archives === "1";
   const all = await listCardsForActor(ctx, { includeArchived: true });
@@ -27,7 +28,6 @@ export default async function CardsPage({ searchParams }: PageProps<"/app/cartes
   const visible = showArchived ? all.filter((c) => c.status === "archived") : active;
   const quota = ctx.entitlement.quotas.cards;
   const base = `${appUrl()}/${ctx.organization.slug}`;
-  const canCreate = can(ctx, "cards.create");
   const manage = can(ctx, "cards.manageAll");
 
   return (
@@ -36,9 +36,12 @@ export default async function CardsPage({ searchParams }: PageProps<"/app/cartes
         title="Cartes"
         description={manage ? `${active.length} / ${quota} carte(s) utilisée(s), brouillons inclus. Les cartes archivées ne comptent pas.` : "Les cartes qui vous sont attribuées."}
         actions={
+<>
+            {canCreate && <Link href="/app/cartes/import" className="text-sm font-semibold text-brand underline">Importer un fichier CSV</Link>}
           <Link href={showArchived ? "/app/cartes" : "/app/cartes?archives=1"} className="text-sm font-semibold text-brand underline">
             {showArchived ? "Voir les cartes actives" : "Voir les archives"}
           </Link>
+          </>
         }
       />
 

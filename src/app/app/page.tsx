@@ -32,7 +32,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/app">) {
   return (
     <>
       <PageHeader title={`Bonjour ${ctx.user.name.split(" ")[0]}`} description={ctx.organization.name} actions={can(ctx, "cards.create") && <ButtonLink href="/app/cartes">Gérer les cartes</ButtonLink>} />
-      {sp.bienvenue && <div className="mb-6"><Alert tone="success" title="Organisation créée">Votre essai gratuit a démarré. Créez votre première carte depuis la page « Cartes ».</Alert></div>}
+      {sp.bienvenue === "1" && <div className="mb-6"><Alert tone="success" title="Organisation créée">Votre essai gratuit a démarré. Créez votre première carte depuis la page « Cartes ».</Alert></div>}
+      {sp.bienvenue === "sans-essai" && <div className="mb-6"><Alert tone="info" title="Organisation créée, sans essai">Vous avez déjà bénéficié de l&apos;essai gratuit. Vous pouvez préparer vos cartes ; leur publication nécessite une formule.</Alert></div>}
       {sp.refus && <div className="mb-6"><Alert tone="warning">Cette page n&apos;est pas accessible avec votre rôle.</Alert></div>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Panel title="Formule"><p className="text-lg font-bold">{ent.planName ?? STATE_LABELS[ent.state]}</p><p className="text-sm text-muted">{ent.until ? `Échéance : ${formatDateTime(ent.until)}` : STATE_LABELS[ent.state]}</p></Panel>
