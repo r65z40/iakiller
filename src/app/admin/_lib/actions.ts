@@ -74,6 +74,15 @@ export async function disableUserAction(fd: FormData) {
   });
 }
 
+export async function syncStripePricesAction() {
+  await act("/admin/plans", "platform.plans.manage", async (st) => {
+    const r = await admin.syncStripePrices(st);
+    return r.created === 0
+      ? `Aucun prix à créer : ${r.skipped} prix déjà associé(s) à Stripe.`
+      : `${r.created} prix créé(s) dans Stripe${r.skipped ? `, ${r.skipped} déjà associé(s)` : ""}. ${r.details.join(" · ")}`;
+  });
+}
+
 export async function updatePlanAction(fd: FormData) {
   await act("/admin/plans", "platform.plans.manage", async (st) => {
     await admin.updatePlan(st, s(fd, "id"), { name: s(fd, "name"), description: s(fd, "description"), cardQuota: n(fd, "cardQuota"), storageQuotaMb: n(fd, "storageQuotaMb"), memberQuota: n(fd, "memberQuota"), isActive: fd.get("isActive") === "on", isDemo: fd.get("isDemo") === "on" });

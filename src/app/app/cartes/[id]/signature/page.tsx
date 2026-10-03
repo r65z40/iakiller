@@ -35,6 +35,8 @@ export default async function SignaturePage({ params }: PageProps<"/app/cartes/[
   const doc = publicDocument(parsed.success ? parsed.data : emptyDocument());
   const cardUrl = `${appUrl()}/${org.slug}/${card.slug}`;
   const input = signatureInputFromDocument(doc, { cardUrl, mediaUrl: (mid) => `${appUrl()}/m/${mid}` });
+  // Mini QR public (servi uniquement si la carte est publiée et accessible).
+  if (card.publishedVersionId) input.qrUrl = `${appUrl()}/r/${card.publicToken}/qr`;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">

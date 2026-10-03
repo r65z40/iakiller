@@ -25,6 +25,15 @@ export interface SignatureInput {
   textColor: string;
   mutedColor: string;
   ctaLabel: string;
+  /** URL absolue d'une image QR publique (optionnelle), ex. https://domaine/r/{token}/qr */
+  qrUrl?: string;
+}
+
+export interface SignatureOptions {
+  /** Afficher le logo de l'entreprise en bannière au-dessus de la signature. */
+  logoBanner?: boolean;
+  /** Afficher un mini QR code renvoyant vers la carte. */
+  qr?: boolean;
 }
 
 const esc = (s: string) =>
@@ -72,7 +81,7 @@ function row(label: string, value: string, href: string | null, muted: string, t
 }
 
 /** Construit la signature. Retourne du HTML prêt à coller dans Gmail, Outlook, Apple Mail… */
-export function buildSignatureHtml(input: SignatureInput, template: SignatureTemplate = "classic"): string {
+export function buildSignatureHtml(input: SignatureInput, template: SignatureTemplate = "classic", options: SignatureOptions = {}): string {
   const primary = color(input.primaryColor, "#0047BB");
   const text = color(input.textColor, "#14213D");
   const muted = color(input.mutedColor, "#5b6478");
@@ -90,42 +99,43 @@ export function buildSignatureHtml(input: SignatureInput, template: SignatureTem
   const avatarCell = avatar
     ? `<td valign="top" style="padding-right:16px"><img src="${esc(avatar)}" width="72" height="72" alt="${esc(name)}" style="display:block;border-radius:${input.photoUrl ? "50%" : "8px"};object-fit:cover;width:72px;height:72px" /></td>`
     : "";
+  // Mini QR : cellule à droite, renvoyant vers la carte.
+  const qrCell = options.qr && input.qrUrl
+    ? `<td valign="top" align="center" style="padding-left:18px"><a href="${esc(input.cardUrl)}"><img src="${esc(input.qrUrl)}" width="84" height="84" alt="QR code vers ma carte" style="display:block;width:84px;height:84px" /></a></td>`
+    : "";
+  // Bannière logo au-dessus de la signature.
+  const logoBanner = options.logoBanner && input.logoUrl
+    ? `<tr><td colspan="3" style="padding-bottom:10px"><img src="${esc(input.logoUrl)}" alt="${esc(input.company || name)}" height="40" style="display:block;height:40px;width:auto" /></td></tr>`
+    : "";
 
   const cta = `<a href="${esc(input.cardUrl)}" style="display:inline-block;margin-top:8px;background:${primary};color:#ffffff;text-decoration:none;font-size:13px;font-weight:bold;padding:8px 14px;border-radius:6px">${esc(input.ctaLabel)}</a>`;
 
   if (template === "compact") {
-    return [
-      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:${text}">`,
-      `<tr><td style="font-size:15px;font-weight:bold;color:${text}">${esc(name)}</td></tr>`,
-      role ? `<tr><td style="font-size:13px;color:${muted}">${esc(role)}</td></tr>` : "",
-      `<tr><td style="font-size:13px;padding-top:4px">`,
+    const compactQr = options.qr && input.qrUrl ? `<td valign="middle" style="padding-left:16px"><a href="${esc(input.cardUrl)}"><img src="${esc(input.qrUrl)}" width="72" height="72" alt="QR code" style="display:block;width:72px;height:72px" /></a></td>` : "";
+    const content = [
+      `<td valign="top">`,
+      options.logoBanner && input.logoUrl ? `<img src="${esc(input.logoUrl)}" alt="${esc(input.company || name)}" height="34" style="display:block;height:34px;width:auto;margin-bottom:6px" />` : "",
+      `<div style="font-size:15px;font-weight:bold;color:${text}">${esc(name)}</div>`,
+      role ? `<div style="font-size:13px;color:${muted}">${esc(role)}</div>` : "",
+      `<div style="font-size:13px;padding-top:4px">`,
       [input.mobile && `<a href="${esc(telHref(input.mobile) || "#")}" style="color:${text};text-decoration:none">${esc(input.mobile)}</a>`, input.email && `<a href="mailto:${esc(input.email)}" style="color:${text};text-decoration:none">${esc(input.email)}</a>`].filter(Boolean).join(" &nbsp;·&nbsp; "),
-      `</td></tr>`,
-      `<tr><td style="padding-top:6px"><a href="${esc(input.cardUrl)}" style="color:${primary};font-weight:bold;text-decoration:none;font-size:13px">${esc(input.ctaLabel)} →</a></td></tr>`,
-      `</table>`,
+      `</div>`,
+      `<div style="padding-top:6px"><a href="${esc(input.cardUrl)}" style="color:${primary};font-weight:bold;text-decoration:none;font-size:13px">${esc(input.ctaLabel)} →</a></div>`,
+      `</td>`,
     ].join("");
+    return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:${text}"><tr>${content}${compactQr}</tr></table>`;
   }
 
-  if (template === "banner") {
-    return [
-      `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:${text};border-left:3px solid ${primary};padding-left:14px">`,
-      `<tr>${avatarCell}<td valign="top">`,
-      `<div style="font-size:16px;font-weight:bold;color:${text}">${esc(name)}</div>`,
-      role ? `<div style="font-size:13px;color:${primary};font-weight:bold">${esc(role)}</div>` : "",
-      `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:6px">${lines.join("")}</table>`,
-      `<div>${cta}</div>`,
-      `</td></tr></table>`,
-    ].join("");
-  }
-
-  // classic
+  const borderStyle = template === "banner" ? `border-left:3px solid ${primary};padding-left:14px` : "";
+  const roleStyle = template === "banner" ? `color:${primary};font-weight:bold` : `color:${muted}`;
   return [
-    `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:${text}">`,
+    `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;color:${text};${borderStyle}">`,
+    logoBanner,
     `<tr>${avatarCell}<td valign="top">`,
     `<div style="font-size:16px;font-weight:bold;color:${text}">${esc(name)}</div>`,
-    role ? `<div style="font-size:13px;color:${muted}">${esc(role)}</div>` : "",
+    role ? `<div style="font-size:13px;${roleStyle}">${esc(role)}</div>` : "",
     `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:6px">${lines.join("")}</table>`,
     `<div>${cta}</div>`,
-    `</td></tr></table>`,
+    `</td>${qrCell}</tr></table>`,
   ].join("");
 }
