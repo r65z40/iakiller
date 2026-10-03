@@ -15,16 +15,24 @@ async function main() {
   if (process.env.NODE_ENV === "production" && !process.argv.includes("--force")) {
     throw new Error("Refus : seed en production. Utilisez --force en connaissance de cause.");
   }
+  // Offres et prix HT. Modifiables ensuite dans /admin/plans (ajouter les identifiants de
+  // prix Stripe avant la vente). Prix en centimes ; taxBehavior "exclusive" = montants HT.
   const plans = [
-    { id: "plan_individuel", code: "individuel", name: "Individuel", description: "Pour un indépendant ou un artisan.", cardQuota: 1, storageQuotaMb: 200, memberQuota: 1, sortOrder: 1, m: 900, y: 9000 },
-    { id: "plan_equipe", code: "equipe", name: "Équipe", description: "Pour une petite équipe commerciale.", cardQuota: 10, storageQuotaMb: 1000, memberQuota: 10, sortOrder: 2, m: 2900, y: 29000 },
-    { id: "plan_entreprise", code: "entreprise", name: "Entreprise", description: "Gestion centralisée de nombreux collaborateurs.", cardQuota: 50, storageQuotaMb: 5000, memberQuota: 60, sortOrder: 3, m: 9900, y: 99000 },
+    { id: "plan_solo", code: "solo", name: "Solo", description: "Pour un indépendant ou un artisan.", cardQuota: 1, storageQuotaMb: 200, memberQuota: 1, sortOrder: 1, m: 290, y: 2900 },
+    { id: "plan_pro", code: "pro", name: "Pro", description: "Pour un professionnel actif, plusieurs cartes.", cardQuota: 5, storageQuotaMb: 1000, memberQuota: 5, sortOrder: 2, m: 490, y: 4900 },
+    { id: "plan_equipe", code: "equipe", name: "Équipe", description: "Pour une équipe commerciale.", cardQuota: 20, storageQuotaMb: 4000, memberQuota: 20, sortOrder: 3, m: 1490, y: 14900 },
+    { id: "plan_entreprise", code: "entreprise", name: "Entreprise", description: "Gestion centralisée de nombreux collaborateurs.", cardQuota: 50, storageQuotaMb: 10000, memberQuota: 50, sortOrder: 4, m: 2990, y: 29900 },
   ];
   for (const p of plans) {
-    await db.insert(schema.plan).values({ id: p.id, code: p.code, name: p.name, description: p.description, cardQuota: p.cardQuota, storageQuotaMb: p.storageQuotaMb, memberQuota: p.memberQuota, sortOrder: p.sortOrder, isDemo: true }).onConflictDoNothing();
+    await db
+      .insert(schema.plan)
+      .values({ id: p.id, code: p.code, name: p.name, description: p.description, cardQuota: p.cardQuota, storageQuotaMb: p.storageQuotaMb, memberQuota: p.memberQuota, sortOrder: p.sortOrder, isDemo: false })
+      .onConflictDoUpdate({ target: schema.plan.id, set: { name: p.name, description: p.description, cardQuota: p.cardQuota, storageQuotaMb: p.storageQuotaMb, memberQuota: p.memberQuota, sortOrder: p.sortOrder, isDemo: false } });
     for (const [interval, amount] of [["month", p.m], ["year", p.y]] as const) {
-      const [exists] = await db.select().from(schema.planPrice).where(eq(schema.planPrice.id, `${p.id}_${interval}`));
-      if (!exists) await db.insert(schema.planPrice).values({ id: `${p.id}_${interval}`, planId: p.id, interval, amountCents: amount, isDemo: true, taxBehavior: "exclusive" });
+      await db
+        .insert(schema.planPrice)
+        .values({ id: `${p.id}_${interval}`, planId: p.id, interval, amountCents: amount, isDemo: false, taxBehavior: "exclusive" })
+        .onConflictDoUpdate({ target: schema.planPrice.id, set: { amountCents: amount, isDemo: false } });
     }
   }
   await db.insert(schema.serviceOffer).values({ id: "offer_creation", name: "Création de carte par notre équipe", description: "Réalisation d'une carte à partir de votre brief et de vos fichiers.", amountCents: 14900, includedRevisions: 2, targetDays: 5, isDemo: true }).onConflictDoNothing();

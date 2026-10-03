@@ -1,4 +1,4 @@
-# Cartes de visite numériques (nom provisoire : Carto)
+# MaCartePro — cartes de visite numériques
 
 SaaS de cartes de visite numériques pour artisans, indépendants, commerciaux, TPE et PME : éditeur par blocs, page publique mobile `/{entreprise}/{personne}`, QR code stable, vCard, formulaire de prospects, statistiques expliquées, équipes, abonnements Stripe, création accompagnée, administration.
 
