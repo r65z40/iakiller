@@ -22,6 +22,9 @@ async function main() {
   if (!u) throw new Error("Compte introuvable : inscrivez-vous d'abord normalement.");
   if (!u.emailVerified) throw new Error("Email non vérifié.");
   await db.update(schema.user).set({ platformRole: revoke ? null : role }).where(eq(schema.user.id, u.id));
+  // Ferme toutes les sessions existantes : une session ouverte avant l'attribution du rôle
+  // (avec le seul mot de passe, sans 2FA) ne doit pas hériter des droits d'administration.
+  await db.delete(schema.session).where(eq(schema.session.userId, u.id));
   await audit({ actorType: "system", action: revoke ? "platform.role_revoked" : "platform.role_granted", targetType: "user", targetId: u.id, metadata: { role, via: "cli" } });
   console.log(revoke ? `Rôle retiré à ${email}.` : `Rôle « ${role} » attribué à ${email}. Activez la double authentification avant d'accéder à /admin.`);
   await pool.end();

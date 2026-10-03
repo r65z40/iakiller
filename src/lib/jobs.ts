@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSettings } from "@/lib/settings/store";
 import { audit } from "@/lib/audit";
@@ -119,7 +119,13 @@ export async function cleanup(now = new Date()) {
   const ver = await db.delete(schema.verification).where(lt(schema.verification.expiresAt, now)).returning({ id: schema.verification.id });
   const ses = await db.delete(schema.session).where(lt(schema.session.expiresAt, now)).returning({ id: schema.session.id });
   const grants = await db.update(schema.supportAccessGrant).set({ revokedAt: now }).where(and(lt(schema.supportAccessGrant.expiresAt, now), isNull(schema.supportAccessGrant.revokedAt))).returning({ id: schema.supportAccessGrant.id });
-  return { invitations: inv.length, verifications: ver.length, sessions: ses.length, grants: grants.length };
+  // Purge des emails deja envoyes ou journalises de plus de 30 jours : leurs corps contiennent
+  // des liens sensibles (confirmation, reinitialisation, invitation) qu'il est inutile de garder.
+  const mails = await db
+    .delete(schema.emailOutbox)
+    .where(and(inArray(schema.emailOutbox.status, ["sent", "logged"]), lt(schema.emailOutbox.createdAt, new Date(now.getTime() - 30 * 86400_000))))
+    .returning({ id: schema.emailOutbox.id });
+  return { invitations: inv.length, verifications: ver.length, sessions: ses.length, grants: grants.length, emails: mails.length };
 }
 
 /**

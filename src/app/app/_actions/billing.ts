@@ -23,9 +23,9 @@ export async function previewChangeAction(planPriceId: string) {
   return run(async () => billing.previewPlanChange(await requireOrgAction("billing.manage"), planPriceId));
 }
 
-export async function changePlanAction(planPriceId: string, prorationDate: number) {
+export async function changePlanAction(planPriceId: string) {
   return run(async () => {
-    await billing.changePlan(await requireOrgAction("billing.manage"), planPriceId, prorationDate);
+    await billing.changePlan(await requireOrgAction("billing.manage"), planPriceId);
     revalidatePath("/app", "layout");
     return "Formule modifiée.";
   });

@@ -8,7 +8,7 @@ import { getSettings } from "@/lib/settings/store";
 import { missingCompanyFields } from "@/lib/settings/schema";
 import { settingsBlockers } from "@/lib/settings/service";
 import type { Actor } from "@/lib/cards/service";
-import { asReader, getStripe } from "./stripe";
+import { asReader, billingMode, getStripe } from "./stripe";
 import { syncSubscription } from "./sync";
 
 export interface PlanWithPrices {
@@ -55,6 +55,9 @@ export async function launchBlockers(): Promise<string[]> {
   }
   if (!process.env.STRIPE_SECRET_KEY) blockers.push("STRIPE_SECRET_KEY non configurée.");
   if (!process.env.STRIPE_WEBHOOK_SECRET) blockers.push("STRIPE_WEBHOOK_SECRET non configurée.");
+  if (process.env.NODE_ENV === "production" && billingMode() === "test") {
+    blockers.push("Clé Stripe de TEST en production : des paiements fictifs (carte 4242) donneraient de vrais droits. Passez en clé live.");
+  }
   const settings = await getSettings();
   const missing = missingCompanyFields(settings);
   if (missing.length) blockers.push(`Informations de la société à compléter : ${missing.join(", ")}.`);
@@ -206,7 +209,7 @@ export async function previewPlanChange(actor: Actor, planPriceId: string): Prom
   };
 }
 
-export async function changePlan(actor: Actor, planPriceId: string, prorationDate: number) {
+export async function changePlan(actor: Actor, planPriceId: string) {
   if (!can(actor, "billing.manage")) throw new DomainError("forbidden", "Action réservée.");
   const { price, plan } = await loadSellablePrice(planPriceId);
   await db.transaction(async (tx) => {
@@ -222,7 +225,9 @@ export async function changePlan(actor: Actor, planPriceId: string, prorationDat
   await stripe.subscriptions.update(live.stripeSubscriptionId, {
     items: [{ id: sub.items.data[0].id, price: price.stripePriceId! }],
     proration_behavior: "always_invoice",
-    proration_date: prorationDate,
+    // Horodatage fixé par le serveur : une valeur fournie par le client permettrait de
+    // forger un crédit de prorata (facturer une période presque entière comme inutilisée).
+    proration_date: Math.floor(Date.now() / 1000),
     payment_behavior: "pending_if_incomplete",
   });
   await syncSubscription(asReader(stripe), live.stripeSubscriptionId);

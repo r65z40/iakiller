@@ -18,6 +18,16 @@ function actorType(actor: Actor) {
   return actor.supportGrantId ? ("staff" as const) : ("user" as const);
 }
 
+/**
+ * La gestion des membres est interdite en mode assistance : sinon un membre de l'équipe
+ * pourrait s'inviter lui-même comme gestionnaire et obtenir un accès durable, survivant à
+ * l'expiration de l'accès d'assistance. L'assistance modifie le contenu, pas la composition
+ * de l'organisation.
+ */
+function assertNotSupportMode(actor: Actor) {
+  if (actor.supportGrantId) throw new DomainError("forbidden", "La gestion des membres n'est pas possible en mode assistance.");
+}
+
 export async function listMembers(actor: Actor) {
   if (!can(actor, "members.view")) throw new DomainError("forbidden", "Accès réservé.");
   return db
@@ -37,6 +47,7 @@ export async function listPendingInvitations(actor: Actor) {
 
 /** Invitation par email : jeton à usage unique, stocké uniquement sous forme d'empreinte. */
 export async function inviteMember(actor: Actor, rawEmail: string, role: OrgRole, inviterName: string) {
+  assertNotSupportMode(actor);
   const email = rawEmail.trim().toLowerCase();
   if (!isValidEmail(email)) throw new DomainError("invalid", "Adresse email invalide.");
   if (!isOrgRole(role) || !canAssignRole(actor, role)) throw new DomainError("forbidden", "Vous ne pouvez pas attribuer ce rôle.");
@@ -80,6 +91,7 @@ export async function inviteMember(actor: Actor, rawEmail: string, role: OrgRole
 }
 
 export async function revokeInvitation(actor: Actor, invitationId: string) {
+  assertNotSupportMode(actor);
   if (!can(actor, "members.manage")) throw new DomainError("forbidden", "Action réservée.");
   await db
     .update(schema.invitation)
@@ -110,6 +122,12 @@ export async function acceptInvitation(user: { id: string; email: string; emailV
     throw new DomainError("forbidden", `Cette invitation est destinée à ${found.invitation.email}. Connectez-vous avec cette adresse.`);
   }
   await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${schema.organization} where id = ${found.invitation.organizationId} for update`);
+    // Le quota est revérifié à l'acceptation : une invitation émise sous un ancien quota (ou
+    // avant une rétrogradation) ne doit pas faire dépasser la formule en cours.
+    const ent = await loadEntitlement(found.invitation.organizationId, tx);
+    const [members] = await tx.select({ n: sql<number>`count(*)::int` }).from(schema.membership).where(eq(schema.membership.organizationId, found.invitation.organizationId));
+    if ((members?.n ?? 0) >= ent.quotas.members) throw new DomainError("quota_exceeded", "Cette organisation a atteint le nombre de membres de sa formule. Demandez au propriétaire de faire de la place.");
     const marked = await tx
       .update(schema.invitation)
       .set({ acceptedAt: new Date() })
@@ -137,6 +155,7 @@ export async function acceptInvitation(user: { id: string; email: string; emailV
 }
 
 export async function changeMemberRole(actor: Actor, membershipId: string, role: OrgRole, canManageBilling = false) {
+  assertNotSupportMode(actor);
   const [m] = await db.select().from(schema.membership).where(and(eq(schema.membership.id, membershipId), eq(schema.membership.organizationId, actor.organization.id)));
   if (!m) throw new DomainError("not_found", "Membre introuvable");
   if (!isOrgRole(role) || !isOrgRole(m.role) || !canAssignRole(actor, role, m.role)) throw new DomainError("forbidden", "Modification de rôle non autorisée.");
@@ -152,6 +171,7 @@ export async function changeMemberRole(actor: Actor, membershipId: string, role:
  * (l'appartenance est vérifiée à chaque requête). Option : désactiver ses cartes.
  */
 export async function removeMember(actor: Actor, membershipId: string, opts: { disableAssignedCards: boolean }) {
+  assertNotSupportMode(actor);
   if (!can(actor, "members.manage")) throw new DomainError("forbidden", "Action réservée.");
   const [m] = await db.select().from(schema.membership).where(and(eq(schema.membership.id, membershipId), eq(schema.membership.organizationId, actor.organization.id)));
   if (!m) throw new DomainError("not_found", "Membre introuvable");

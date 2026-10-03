@@ -54,9 +54,17 @@ export function toInternationalDigits(phone: string, defaultCountryCode = "33"):
  */
 export function safeInternalPath(input: string | null | undefined, fallback = "/app"): string {
   if (!input) return fallback;
-  if (!input.startsWith("/") || input.startsWith("//") || input.startsWith("/\\")) return fallback;
-  if (/[\r\n]/.test(input)) return fallback;
-  return input;
+  // Les navigateurs retirent les caractères de contrôle (dont la tabulation) en analysant une
+  // URL, si bien que "/\t/evil.com" devient "//evil.com". On les refuse donc tous, ainsi que
+  // les antislashs, avant de vérifier que le résultat reste une URL relative à notre origine.
+  if (!input.startsWith("/") || input.startsWith("//") || /[\u0000-\u001f\u007f\\]/.test(input)) return fallback;
+  try {
+    const resolved = new URL(input, "https://internal.invalid");
+    if (resolved.origin !== "https://internal.invalid") return fallback;
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return fallback;
+  }
 }
 
 const VIDEO_PATTERNS: { provider: "youtube" | "vimeo"; re: RegExp }[] = [

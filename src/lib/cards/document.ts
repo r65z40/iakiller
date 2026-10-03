@@ -245,6 +245,29 @@ export function parseDocument(raw: unknown) {
 }
 
 /** Tous les médias référencés par un document (pour contrôle d'appartenance et accès public). */
+/**
+ * Projection publique d'une carte : tout ce qui n'est pas visible est retiré AVANT que le
+ * document ne quitte le serveur. Sans cela, le contenu des blocs masqués et la photo ou le
+ * logo masqués seraient sérialisés dans la page publique (et leurs fichiers servis par /m).
+ */
+export function publicDocument(doc: CardDocument): CardDocument {
+  return {
+    ...doc,
+    identity: {
+      ...doc.identity,
+      photoMediaId: doc.identity.showPhoto ? doc.identity.photoMediaId : "",
+      logoMediaId: doc.identity.showLogo ? doc.identity.logoMediaId : "",
+    },
+    blocks: doc.blocks
+      .filter((b) => !b.hidden)
+      .map((b): CardBlock => {
+        if (b.type === "gallery") return { ...b, items: b.items.filter((i) => i.mediaId) };
+        if (b.type === "documents") return { ...b, items: b.items.filter((i) => i.mediaId) };
+        return b;
+      }),
+  };
+}
+
 export function collectMediaIds(doc: CardDocument): string[] {
   const ids = new Set<string>();
   if (doc.identity.photoMediaId) ids.add(doc.identity.photoMediaId);

@@ -25,7 +25,7 @@ export async function updateBrand(
   for (const c of [input.primaryColor, input.backgroundColor, input.textColor]) {
     if (!isHexColor(c)) throw new DomainError("invalid", "Couleur invalide (#RRGGBB).");
   }
-  if (!(input.font in FONTS)) throw new DomainError("invalid", "Police non autorisée.");
+  if (!Object.hasOwn(FONTS, input.font)) throw new DomainError("invalid", "Police non autorisée.");
   if (input.logoMediaId) {
     const [m] = await db
       .select({ id: schema.mediaAsset.id })

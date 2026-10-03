@@ -18,9 +18,16 @@ export function mediaResponse(body: Buffer, media: Media, opts: { cache: "public
     "Cache-Control": opts.cache === "public" ? "public, max-age=300, must-revalidate, no-transform" : "private, max-age=60",
   });
   if (opts.cache === "public") headers.set("CDN-Cache-Control", "no-store");
-  const filename = media.originalName.replace(/[^\w.\- ]+/g, "_");
   if (media.kind === "document" || opts.download) {
-    headers.set("Content-Disposition", `${opts.download ? "attachment" : "inline"}; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(media.originalName)}`);
+    // Nom de téléchargement sûr : l'extension est imposée d'après le type réel du fichier
+    // (un PDF reste .pdf, une image son format), et les caractères de contrôle ou de
+    // réécriture bidirectionnelle (U+202E…) sont retirés. On évite ainsi les polyglottes
+    // (« plaquette.hta ») et les noms trompeurs servis depuis notre domaine.
+    const ext = media.mimeType === "application/pdf" ? "pdf" : (media.mimeType.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "");
+    const base = media.originalName.replace(/\.[^.]*$/, "").replace(/[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/g, "").trim();
+    const safeBase = (base.replace(/[^\w.\- ]+/g, "_").slice(0, 100) || "fichier").replace(/\.+$/, "");
+    const filename = `${safeBase}.${ext}`;
+    headers.set("Content-Disposition", `${opts.download ? "attachment" : "inline"}; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
   }
   return new Response(new Uint8Array(body), { status: 200, headers });
 }

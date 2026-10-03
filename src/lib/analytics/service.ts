@@ -62,7 +62,7 @@ export async function recordEvent(
   const now = meta.now ?? new Date();
   if (typeof input.token !== "string" || !/^[A-Za-z0-9_-]{10,64}$/.test(input.token)) return { ok: false, reason: "token" };
   if (typeof input.viewId !== "string" || !/^[a-f0-9]{24}$/.test(input.viewId)) return { ok: false, reason: "view" };
-  if (typeof input.type !== "string" || !(input.type in EVENT_TYPES) || input.type === "lead_submit") return { ok: false, reason: "type" };
+  if (typeof input.type !== "string" || !Object.hasOwn(EVENT_TYPES, input.type) || input.type === "lead_submit") return { ok: false, reason: "type" };
   if (!rateLimit(`evt:${meta.ipKey}`, 120, 60_000, now.getTime())) return { ok: false, reason: "rate" };
 
   const [card] = await db.select().from(schema.card).where(eq(schema.card.publicToken, input.token));

@@ -45,7 +45,13 @@ export function SecurityPanel({ twoFactorEnabled }: { twoFactorEnabled: boolean 
                 <Button type="button" size="sm" disabled={pending} onClick={() => start(async () => {
                   const r = await authClient.twoFactor.verifyTotp({ code: code.replace(/\s/g, "") });
                   if (r.error) setMsg({ ok: false, text: "Code invalide." });
-                  else { setStep("done"); setMsg({ ok: true, text: "Double authentification activée." }); }
+                  else {
+                    // Ferme les autres sessions (ouvertes avec le seul mot de passe, avant la 2FA) :
+                    // sans cela elles garderaient leurs droits une fois la 2FA activée.
+                    await authClient.revokeOtherSessions().catch(() => undefined);
+                    setStep("done");
+                    setMsg({ ok: true, text: "Double authentification activée. Les autres sessions ont été fermées." });
+                  }
                 })}>Vérifier</Button>
               </div>
             </div>
