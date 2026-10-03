@@ -70,13 +70,13 @@ export default async function Image({ params }: { params: Promise<{ org: string;
     (
       <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", background: theme.primaryColor, fontFamily: "Inter" }}>
         {bannerImg && (
-          // eslint-disable-next-line @next/next/no-img-element
+           
           <img src={bannerImg} alt="" width={1200} height={630} style={{ position: "absolute", top: 0, left: 0, objectFit: "cover" }} />
         )}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", background: bannerImg ? "rgba(255,255,255,0.35)" : "transparent" }} />
         <div style={{ position: "absolute", left: 60, right: 60, top: 70, bottom: 70, display: "flex", alignItems: "center", gap: 48, padding: "48px 56px", background: "#FFFFFF", borderRadius: 36, boxShadow: "0 20px 60px rgba(20,33,61,0.25)" }}>
           {avatar && (
-            // eslint-disable-next-line @next/next/no-img-element
+             
             <img src={avatar} alt="" width={220} height={220} style={{ borderRadius: photo ? 110 : 28, objectFit: photo ? "cover" : "contain", flexShrink: 0 }} />
           )}
           <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
@@ -86,7 +86,7 @@ export default async function Image({ params }: { params: Promise<{ org: string;
             <div style={{ display: "flex", marginTop: 36, fontSize: 26, color: theme.mutedColor }}>Carte de visite numérique · {settings.brand.name}</div>
           </div>
           {photo && logo && (
-            // eslint-disable-next-line @next/next/no-img-element
+             
             <img src={logo} alt="" width={110} height={110} style={{ position: "absolute", right: 48, top: 48, objectFit: "contain" }} />
           )}
         </div>

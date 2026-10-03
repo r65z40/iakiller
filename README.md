@@ -55,6 +55,10 @@ npm run jobs             # une exécution (cron toutes les 15 min)
 npm run jobs -- --watch  # boucle continue
 ```
 
+## Apple Wallet et Google Wallet
+
+Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (procédure dans [docs/WALLET.md](docs/WALLET.md)). Sans elles, les boutons sont masqués.
+
 ## Vérifications
 
 ```bash

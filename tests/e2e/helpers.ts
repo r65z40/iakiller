@@ -16,7 +16,7 @@ export async function signUpAndCreateOrg(page: Page, orgName: string) {
   await page.goto(link);
   await page.waitForURL(/organisations\/nouvelle/);
   await page.getByLabel("Nom de l'entreprise").fill(orgName);
-  await page.getByRole("button", { name: "Créer et démarrer l'essai" }).click();
+  await page.getByRole("button", { name: /Créer et démarrer l.essai/ }).click();
   await page.waitForURL(/\/app\?bienvenue/);
   return email;
 }

@@ -26,6 +26,7 @@ export interface EditorProps {
   publishBlockedReason: string | null;
   members: { userId: string; name: string; email: string }[];
   assignees: string[];
+  wallet: { apple?: string; google?: string };
 }
 
 type Selection = string | "identity" | "banner" | "theme" | "settings" | "qr" | "versions" | null;
@@ -226,7 +227,7 @@ export function Editor(props: EditorProps) {
         {undo && (
           <div role="status" className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-ink px-3 py-2 text-sm text-white">
             <span>Bloc « {blockLabel(undo.block.type)} » supprimé.</span>
-            <button type="button" onClick={restoreDeleted} className="font-bold underline">Annuler</button>
+            <button type="button" onClick={restoreDeleted} className="font-bold underline">Annuler la suppression</button>
           </div>
         )}
       </div>
@@ -352,7 +353,7 @@ export function Editor(props: EditorProps) {
           {device === "phone" ? (
             <div className="mx-auto w-[390px] max-w-full overflow-hidden rounded-[40px] border-[10px] border-ink bg-[var(--preview-bg)] shadow-xl" style={{ ["--preview-bg" as string]: doc.theme.pageBackground }}>
               <div className="h-[720px] overflow-y-auto px-2 py-3">
-                <CardView doc={doc} media={mediaMap} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
+                <CardView doc={doc} media={mediaMap} wallet={props.wallet} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
               </div>
             </div>
           ) : (
@@ -362,7 +363,7 @@ export function Editor(props: EditorProps) {
                 <span className="ml-3 truncate rounded bg-white px-2 py-0.5 text-[11px] text-muted">{publicUrl}</span>
               </div>
               <div className="px-4 py-10" style={{ background: doc.theme.pageBackground }}>
-                <CardView doc={doc} media={mediaMap} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
+                <CardView doc={doc} media={mediaMap} wallet={props.wallet} mode="preview" highlightBlockId={selection} onSelectBlock={(id) => { setSelection(id); setMobileTab("props"); }} />
               </div>
             </div>
           )}

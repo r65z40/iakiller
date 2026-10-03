@@ -23,6 +23,8 @@ export const EVENT_TYPES = {
   click_appointment: "Clic rendez-vous",
   click_reviews: "Clic consulter les avis",
   click_review_write: "Clic laisser un avis",
+  add_wallet_apple: "Ajout à Apple Wallet (téléchargement)",
+  add_wallet_google: "Ajout à Google Wallet (clic)",
   video_play: "Lancement de vidéo",
   download_pdf: "Téléchargement de PDF",
   download_vcard: "Téléchargement de la fiche contact (vCard)",

@@ -14,6 +14,20 @@
 
 `/admin/reglages` : marque et domaine, société, tarification (délai de grâce, remise annuelle de référence, mention fiscale), conservation (purges automatiques), conditions de la création accompagnée, texte définitif et validation juridique des cinq pages légales, régime de mesure d'audience et sa validation. Réglages stockés dans `platform_setting`, validés par Zod, journalisés, avec les variables d'environnement comme valeurs par défaut. Tests : `tests/integration/settings.test.ts`.
 
+## Améliorations (troisième lot)
+
+| Fonction | Où | Tests |
+|---|---|---|
+| Un seul essai gratuit par utilisateur (résiste aux créations simultanées) | `orgs/service.ts` | `cards.test.ts` |
+| Image d'aperçu générée pour le partage (Open Graph), neutre si la carte est indisponible | `[org]/[person]/opengraph-image.tsx` | vérifiée manuellement |
+| Bloc « Avis clients » : liens uniquement, aucune saisie d'avis ni de note | `cards/document.ts`, `CardView` | `features.test.ts` |
+| Éditeur : annuler et rétablir (Ctrl+Z, Ctrl+Maj+Z), aperçu téléphone et ordinateur, recadrage des images (nouvelle image, originale conservée) | `components/editor/*`, `/api/media/[id]/crop` | `features.test.ts` + navigateur |
+| QR personnalisé (couleur, logo) avec vérification de contraste et décodage réel à deux tailles | `cards/qr.ts` | `features.test.ts` |
+| Import CSV des cartes salariés (aperçu, quota, invitation et attribution à l'acceptation, publication facultative) | `cards/import.ts`, `/app/cartes/import` | `features.test.ts` |
+| Apple Wallet (.pkpass) et Google Wallet (lien signé) | `lib/wallet/*`, `[org]/[person]/wallet/*`, `docs/WALLET.md` | `wallet.test.ts` (certificats factices) |
+
+Limite : Apple Wallet et Google Wallet n'ont pas pu être essayés avec de vrais identifiants ni sur un vrai téléphone.
+
 ## Couverture des critères de validation
 
 | # | Critère | Preuve |

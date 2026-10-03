@@ -64,7 +64,7 @@ test("réordonnancement des blocs au clavier et par boutons, suppression annulab
   // Suppression puis annulation.
   await page.getByRole("button", { name: "Supprimer Liens" }).click();
   await expect(page.getByText("Bloc « Liens » supprimé.")).toBeVisible();
-  await page.getByRole("button", { name: "Annuler" }).click();
+  await page.getByRole("button", { name: "Annuler la suppression" }).click();
   expect(await labels()).toContain("Liens");
   await waitSaved(page);
 });
@@ -110,4 +110,19 @@ test("routes protégées et QR inconnu", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Carte indisponible" })).toBeVisible();
   const res = await page.request.post("/api/stripe/webhook", { data: "{}", headers: { "stripe-signature": "t=1,v1=faux" } });
   expect([400, 503]).toContain(res.status());
+});
+
+test("annuler et rétablir une modification dans l'éditeur", async ({ page }) => {
+  await signUpAndCreateOrg(page, `Historique E2E ${Date.now()}`);
+  await createCard(page, "Historique");
+  await page.getByLabel("Prénom").fill("Avant");
+  await page.waitForTimeout(1000);
+  await page.getByLabel("Prénom").fill("Après");
+  await page.locator("body").click({ position: { x: 2, y: 2 } });
+  await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByLabel("Prénom")).toHaveValue("Avant");
+  await page.getByRole("button", { name: "Rétablir" }).click();
+  await expect(page.getByLabel("Prénom")).toHaveValue("Après");
+  await page.getByRole("radio", { name: "Ordinateur" }).click();
+  await expect(page.getByRole("heading", { name: /Après/ })).toBeVisible();
 });

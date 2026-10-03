@@ -114,6 +114,8 @@ export const blockSchema = z.discriminatedUnion("type", [
     showCall: z.boolean(),
     showEmail: z.boolean(),
     showVcard: z.boolean(),
+    /** Boutons Apple / Google Wallet (affichés seulement si la plateforme les a configurés). */
+    showWallet: z.boolean().default(true),
     callLabel: short(40),
     emailLabel: short(40),
     vcardLabel: short(40),

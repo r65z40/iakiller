@@ -36,7 +36,7 @@ Ce document sépare les **décisions confirmées** par le cahier des charges des
 | # | Proposition | Valeur par défaut | Où la modifier |
 |---|---|---|---|
 | P1 | Essai sans carte bancaire, démarré à la **création de l'organisation**. L'email doit être vérifié au préalable, car la connexion l'exige. | — | `src/lib/orgs/service.ts` |
-| P2 | Un essai par organisation. Risque : un même utilisateur peut créer plusieurs organisations pour enchaîner les essais. | pas de limite par utilisateur | à décider |
+| P2 | **Confirmé** : un seul essai par utilisateur. Une organisation supplémentaire démarre sans essai (création possible, publication soumise à une formule). Limite connue : une personne peut créer un nouveau compte avec une autre adresse email. | 1 essai par compte | `src/lib/orgs/service.ts` |
 | P3 | Expiration au bout de 7 × 24 h exactement. Horodatages en UTC, affichage en Europe/Paris. | 168 h | `trialRules` dans `src/lib/config.ts` |
 | P4 | Pendant l'essai : 3 cartes non archivées (brouillons inclus), 100 Mo, 3 membres. | 3 / 100 Mo / 3 | `trialRules` |
 | P5 | Après l'essai ou la fin de droit : cartes, QR et médias indisponibles ; compte, édition et paiement conservés ; aucune suppression automatique. | — | `entitlements.ts` |
@@ -84,4 +84,3 @@ Toutes ces décisions se saisissent dans **`/admin/reglages`** (administrateur a
 7. **Régime des statistiques** au regard des recommandations de la CNIL (consentement ou exemption).
 8. **Fournisseurs et budget** : hébergement, base gérée, stockage, emails (voir ARCHITECTURE.md, section Coûts).
 9. **Conditions générales, politique de confidentialité, accord de sous-traitance** : relecture par un professionnel.
-10. **Essais multiples** par un même utilisateur (P2).

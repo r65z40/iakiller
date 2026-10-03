@@ -32,7 +32,7 @@ export function newBlock(type: BlockType): CardBlock {
   const base = { id: blockId(), hidden: false };
   switch (type) {
     case "actions":
-      return { ...base, type, showCall: true, showEmail: true, showVcard: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" };
+      return { ...base, type, showCall: true, showEmail: true, showVcard: true, showWallet: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" };
     case "contacts":
       return { ...base, type, title: "Coordonnées", items: [] };
     case "about":

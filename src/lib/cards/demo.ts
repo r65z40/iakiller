@@ -26,7 +26,7 @@ export const DEMO_CARDS: { id: string; title: string; template: string; document
       identity: { firstName: "Camille", lastName: "Moreau", jobTitle: "Menuisière agenceuse", company: "Atelier Moreau (exemple fictif)", photoMediaId: null, logoMediaId: "demo-logo-atelier", showPhoto: true, showLogo: true },
       banner: { mediaId: "demo-banner-atelier", focalX: 50, focalY: 50, height: 140, blur: 2, veilOpacity: 15 },
       blocks: [
-        { id: "d1act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" },
+        { id: "d1act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, showWallet: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" },
         { id: "d1con", hidden: false, type: "contacts", title: "Coordonnées", items: [
           { id: "item-c1", kind: "mobile", label: "Mobile · Camille Moreau", value: "06 39 98 12 34" },
           { id: "item-c2", kind: "landline", label: "Atelier", value: "01 99 00 12 34" },
@@ -52,7 +52,7 @@ export const DEMO_CARDS: { id: string; title: string; template: string; document
       identity: { firstName: "Léa", lastName: "Bernard", jobTitle: "Consultante en organisation", company: "LB Conseil (exemple fictif)", photoMediaId: "demo-portrait", logoMediaId: "demo-logo-conseil", showPhoto: true, showLogo: true },
       banner: { mediaId: "demo-banner-conseil", focalX: 50, focalY: 50, height: 120, blur: 0, veilOpacity: 0 },
       blocks: [
-        { id: "d2act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, callLabel: "Appeler", emailLabel: "Écrire", vcardLabel: "Enregistrer le contact" },
+        { id: "d2act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, showWallet: true, callLabel: "Appeler", emailLabel: "Écrire", vcardLabel: "Enregistrer le contact" },
         { id: "d2abo", hidden: false, type: "about", title: "Accompagnement", text: "J'aide les TPE à **structurer leurs process** et à gagner du temps au quotidien.\n\n- Diagnostic en une demi-journée\n- Plan d'action concret\n- Suivi trimestriel", tags: [] },
         { id: "d2app", hidden: false, type: "appointment", title: "Premier échange", label: "Réserver 30 minutes", url: "https://agenda.exemple/lea-bernard", note: "Visioconférence ou téléphone, sans engagement." },
         { id: "d2frm", hidden: false, type: "leadForm", title: "Être recontacté", intro: "Laissez vos coordonnées, je vous réponds sous 48 h ouvrées.", buttonLabel: "Envoyer", fields: { name: "required", email: "optional", phone: "optional", company: "optional", message: "optional" } },
@@ -69,7 +69,7 @@ export const DEMO_CARDS: { id: string; title: string; template: string; document
       identity: { firstName: "Hugo", lastName: "Petit", jobTitle: "Conducteur de travaux", company: "Bâti Exemple SAS (fictif)", photoMediaId: null, logoMediaId: "demo-logo-batiment", showPhoto: true, showLogo: true },
       banner: { mediaId: "demo-banner-batiment", focalX: 50, focalY: 50, height: 110, blur: 0, veilOpacity: 0 },
       blocks: [
-        { id: "d3act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" },
+        { id: "d3act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, showWallet: true, callLabel: "Appeler", emailLabel: "Envoyer un mail", vcardLabel: "Ajouter aux contacts" },
         { id: "d3con", hidden: false, type: "contacts", title: "Contact", items: [
           { id: "item-c1", kind: "mobile", label: "Mobile", value: "06 39 98 45 67" },
           { id: "item-c2", kind: "whatsapp", label: "WhatsApp chantier", value: "06 39 98 45 67" },

@@ -11,6 +11,7 @@ import { parseDocument } from "@/lib/cards/document";
 import { emptyDocument } from "@/lib/cards/defaults";
 import { isLockable } from "@/lib/brand";
 import { Editor } from "@/components/editor/Editor";
+import { walletAvailability } from "@/lib/wallet/load";
 import { DomainError } from "@/lib/errors";
 
 export default async function CardEditorPage({ params }: PageProps<"/app/cartes/[id]">) {
@@ -76,6 +77,7 @@ export default async function CardEditorPage({ params }: PageProps<"/app/cartes/
       publishBlockedReason={card.adminSuspendedAt ? "Carte suspendue par la plateforme." : !ent.canPublish ? "Publication impossible sans essai ni abonnement actif." : null}
       members={members}
       assignees={assignees}
+      wallet={{ apple: walletAvailability().apple ? "#" : undefined, google: walletAvailability().google ? "#" : undefined }}
     />
   );
 }

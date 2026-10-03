@@ -7,6 +7,7 @@ import { CardView } from "@/components/card/CardView";
 import { analyticsConfig, sanitizeUtm } from "@/lib/analytics/config";
 import { leadFormToken } from "@/lib/security/signed";
 import { brand } from "@/lib/config";
+import { walletAvailability } from "@/lib/wallet/load";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function PublicCardPage({ params, searchParams }: Props) {
         mode="public"
         publicToken={card.publicToken}
         vcardUrl={`/${org}/${person}/vcard`}
+        wallet={{ apple: walletAvailability().apple ? `/${org}/${person}/wallet/apple` : undefined, google: walletAvailability().google ? `/${org}/${person}/wallet/google` : undefined }}
         analytics={{ enabled: cfg.enabled, requireConsent: cfg.requireConsent, source, utm: Object.fromEntries(Object.entries(utm).filter(([, v]) => v)) as Record<string, string> }}
         leadFormToken={hasLeadForm ? leadFormToken(card.id) : undefined}
         footer={{ brandName: brand.name, privacyUrl: "/confidentialite#visiteurs", legalUrl: "/mentions-legales" }}

@@ -14,6 +14,12 @@ export async function GET(req: Request, ctx: RouteContext<"/m/[id]">) {
   if (!ok || !media) return new Response("Introuvable", { status: 404, headers: { "Cache-Control": "no-store" } });
   const body = await storage().get(media.storageKey);
   if (!body) return new Response("Introuvable", { status: 404 });
-  const download = new URL(req.url).searchParams.has("telecharger");
-  return mediaResponse(body, media, { cache: "public", download });
+  const params = new URL(req.url).searchParams;
+  if (params.get("format") === "png" && media.kind === "image") {
+    // Variante PNG pour les services qui ne lisent pas le WebP (ex. Google Wallet).
+    const sharp = (await import("sharp")).default;
+    const png = await sharp(body).png().toBuffer();
+    return mediaResponse(png, { ...media, mimeType: "image/png" }, { cache: "public" });
+  }
+  return mediaResponse(body, media, { cache: "public", download: params.has("telecharger") });
 }

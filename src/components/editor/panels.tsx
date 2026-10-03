@@ -246,6 +246,7 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
           <Toggle label="Bouton « Envoyer un mail »" checked={block.showEmail} onChange={(v) => onChange({ ...block, showEmail: v })} />
           <TextInput label="Libellé email" value={block.emailLabel} onChange={(v) => onChange({ ...block, emailLabel: v })} maxLength={40} />
           <Toggle label="Bouton « Ajouter aux contacts » (vCard)" checked={block.showVcard} onChange={(v) => onChange({ ...block, showVcard: v })} />
+          <Toggle label="Boutons Apple Wallet / Google Wallet (si activés par la plateforme)" checked={block.showWallet} onChange={(v) => onChange({ ...block, showWallet: v })} />
           <TextInput label="Libellé contact" value={block.vcardLabel} onChange={(v) => onChange({ ...block, vcardLabel: v })} maxLength={40} />
         </div>
       );

@@ -45,7 +45,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
   },
   rateLimit: {
-    enabled: process.env.NODE_ENV !== "test",
+    // Désactivable uniquement pour les tests automatisés (AUTH_RATE_LIMIT=off).
+    enabled: process.env.NODE_ENV !== "test" && process.env.AUTH_RATE_LIMIT !== "off",
     storage: "database",
     window: 60,
     max: 60,

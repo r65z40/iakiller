@@ -25,6 +25,8 @@ export interface CardViewProps {
   /** Jeton public de la carte (statistiques et formulaire). */
   publicToken?: string;
   vcardUrl?: string;
+  /** Liens Wallet, fournis uniquement si la plateforme les a configurés. */
+  wallet?: { apple?: string; google?: string };
   analytics?: { enabled: boolean; requireConsent: boolean; source: string; utm?: Record<string, string> };
   leadFormToken?: string;
   footer?: { brandName: string; privacyUrl: string; legalUrl: string };
@@ -198,6 +200,7 @@ export function CardView(props: CardViewProps) {
                   phoneKind={firstPhone?.kind}
                   email={firstEmail?.value}
                   vcardUrl={props.vcardUrl}
+                  wallet={props.wallet}
                   publicToken={props.publicToken}
                   leadFormToken={props.leadFormToken}
                   getViewId={() => (analyticsActive ? viewId.current || null : null)}
@@ -453,6 +456,7 @@ function Block(props: {
   phoneKind?: ContactKind;
   email?: string;
   vcardUrl?: string;
+  wallet?: { apple?: string; google?: string };
   publicToken?: string;
   leadFormToken?: string;
   getViewId?: () => string | null;
@@ -492,6 +496,22 @@ function Block(props: {
               <UserPlus size={16} aria-hidden />
               {block.vcardLabel || "Ajouter aux contacts"}
             </a>
+          )}
+          {block.showWallet && (props.wallet?.apple || props.wallet?.google) && (
+            <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {props.wallet?.apple && (
+                <a href={props.wallet.apple} {...linkProps(mode, false)} onClickCapture={() => track("add_wallet_apple")}
+                  className="flex min-h-11 items-center justify-center rounded-[var(--radius)] bg-black px-3 text-[13px] font-semibold text-white">
+                  Ajouter à Apple Wallet
+                </a>
+              )}
+              {props.wallet?.google && (
+                <a href={props.wallet.google} {...linkProps(mode, false)} onClickCapture={() => track("add_wallet_google")}
+                  className="flex min-h-11 items-center justify-center rounded-[var(--radius)] bg-black px-3 text-[13px] font-semibold text-white">
+                  Ajouter à Google Wallet
+                </a>
+              )}
+            </div>
           )}
         </div>
       );

@@ -8,6 +8,7 @@ const env = {
   EMAIL_MODE: "log",
   LOCAL_STORAGE_DIR: "./storage-e2e",
   NODE_ENV: "development",
+  AUTH_RATE_LIMIT: "off",
 };
 
 export default defineConfig({
