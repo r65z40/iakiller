@@ -44,20 +44,29 @@ const step = (s: string) => console.log(`\n\x1b[1m▶ ${s}\x1b[0m`);
 const ok = (s: string) => console.log(`  \x1b[32m✓\x1b[0m ${s}`);
 const warn = (s: string) => console.log(`  \x1b[33m!\x1b[0m ${s}`);
 
-function run(cmd: string, cmdArgs: string[], env?: NodeJS.ProcessEnv): boolean {
+function run(cmd: string, cmdArgs: string[], env?: Record<string, string>): boolean {
   const r = spawnSync(cmd, cmdArgs, { stdio: "inherit", env: { ...process.env, ...env } });
   return r.status === 0;
 }
 
-/** Fusionne des valeurs dans le contenu d'un .env, sans toucher aux clés déjà renseignées. */
-function setEnv(content: string, key: string, value: string, { overwriteEmpty = true } = {}): string {
+/** Lit la valeur d'une clé dans le contenu d'un .env. */
+function getEnv(content: string, key: string): string {
+  const m = content.match(new RegExp(`^${key}=(.*)$`, "m"));
+  return m ? m[1].trim() : "";
+}
+
+/**
+ * Écrit une valeur dans le contenu d'un .env.
+ * - force=false (secrets) : n'écrit que si la clé est absente ou vide (ne jamais écraser).
+ * - force=true (réponses de l'assistant) : remplace toujours, y compris les valeurs d'exemple.
+ */
+function setEnv(content: string, key: string, value: string, { force = false } = {}): string {
   const re = new RegExp(`^(${key})=(.*)$`, "m");
   const m = content.match(re);
   if (!m) return `${content}${content.endsWith("\n") ? "" : "\n"}${key}=${value}\n`;
-  const current = m[2].trim();
-  if (current && !overwriteEmpty) return content;
-  if (current) return content; // ne jamais écraser une valeur déjà posée
-  return content.replace(re, `${key}=${value}`);
+  if (!force && m[2].trim()) return content;
+  // Remplace la ligne sans interpréter les $ du remplacement (mots de passe, base64).
+  return content.replace(re, () => `${key}=${value}`);
 }
 
 async function testDb(url: string): Promise<boolean> {
@@ -99,26 +108,34 @@ async function main() {
   log("\n\x1b[1mInstallation de MaCartePro\x1b[0m");
   log("Cette commande prépare tout le nécessaire. Appuyez sur Entrée pour accepter les valeurs proposées.\n");
 
+  // Les valeurs par défaut proposées reprennent un .env existant s'il y en a un, sinon des
+  // valeurs locales raisonnables (jamais les lignes d'exemple comme « cartes_dev »).
+  const envExists = existsSync(".env");
+  const existing = envExists ? readFileSync(".env", "utf8") : "";
+  const defBrand = getEnv(existing, "NEXT_PUBLIC_BRAND_NAME") || "MaCartePro";
+  const defUrl = getEnv(existing, "APP_URL") || "http://localhost:3000";
+  const defSupport = getEnv(existing, "SUPPORT_EMAIL") || "";
+  const defDb = getEnv(existing, "DATABASE_URL") || "postgres://cartes:cartes@localhost:5432/macartepro";
+
   // 1. Réponses
   step("Configuration");
-  const brand = opt("--brand") ?? (await ask("Nom de la marque", "MaCartePro"));
-  const url = opt("--url") ?? (await ask("Adresse publique (laisser le défaut en local)", "http://localhost:3000"));
-  const support = await ask("Email d'assistance", `support@${safeDomain(url)}`);
-  const dbUrl = opt("--db") ?? (await ask("Base de données (URL PostgreSQL)", "postgres://cartes:cartes@localhost:5432/macartepro"));
+  const brand = opt("--brand") ?? (await ask("Nom de la marque", defBrand));
+  const url = opt("--url") ?? (await ask("Adresse publique (laisser le défaut en local)", defUrl));
+  const support = await ask("Email d'assistance", defSupport || `support@${safeDomain(url)}`);
+  const dbUrl = opt("--db") ?? (await ask("Base de données (URL PostgreSQL)", defDb));
   const adminEmail = opt("--email") ?? (await ask("Email de l'administrateur (facultatif, Entrée pour passer)", ""));
 
-  // 2. Fichier .env (secrets générés)
+  // 2. Fichier .env : secrets générés seulement s'ils manquent, réponses toujours écrites.
   step("Fichier .env");
-  let env = existsSync(".env") ? readFileSync(".env", "utf8") : readFileSync(".env.example", "utf8");
-  const createdEnv = !existsSync(".env");
+  let env = envExists ? existing : readFileSync(".env.example", "utf8");
   env = setEnv(env, "BETTER_AUTH_SECRET", randomBytes(48).toString("base64"));
   env = setEnv(env, "BACKUP_ENCRYPTION_KEY", randomBytes(32).toString("base64"));
-  env = setEnv(env, "NEXT_PUBLIC_BRAND_NAME", brand);
-  env = setEnv(env, "APP_URL", url);
-  env = setEnv(env, "SUPPORT_EMAIL", support);
-  env = setEnv(env, "DATABASE_URL", dbUrl);
+  env = setEnv(env, "NEXT_PUBLIC_BRAND_NAME", brand, { force: true });
+  env = setEnv(env, "APP_URL", url, { force: true });
+  env = setEnv(env, "SUPPORT_EMAIL", support, { force: true });
+  env = setEnv(env, "DATABASE_URL", dbUrl, { force: true });
   writeFileSync(".env", env);
-  ok(createdEnv ? ".env créé avec des secrets générés." : ".env mis à jour (valeurs existantes conservées, secrets manquants générés).");
+  ok(envExists ? ".env mis à jour (secrets conservés, configuration appliquée)." : ".env créé avec des secrets générés.");
   warn("Conservez une copie de BACKUP_ENCRYPTION_KEY hors du serveur : sans elle, les sauvegardes chiffrées sont illisibles.");
 
   // 3. Base de données
@@ -139,26 +156,30 @@ async function main() {
     return;
   }
 
+  // La base validée ci-dessus fait foi pour toutes les commandes suivantes, quelle que soit
+  // la valeur chargée depuis .env.
+  const childEnv = { DATABASE_URL: dbUrl };
+
   // 4. Migrations + données de départ (scripts déjà testés)
   step("Migrations");
-  if (!run("npm", ["run", "db:migrate"])) { warn("Échec des migrations."); process.exitCode = 1; return; }
+  if (!run("npm", ["run", "db:migrate"], childEnv)) { warn("Échec des migrations."); process.exitCode = 1; return; }
   ok("Schéma à jour.");
 
   if (!has("--no-seed") && (await confirm("Insérer les formules et une organisation de démonstration ?", true))) {
     step("Données de départ");
-    run("npm", ["run", "db:seed"]);
+    run("npm", ["run", "db:seed"], childEnv);
   }
 
   // 5. Administrateur
   if (adminEmail) {
     step("Administrateur");
-    const created = run("npm", ["run", "admin:create", "--", "--email", adminEmail]);
+    const created = run("npm", ["run", "admin:create", "--", "--email", adminEmail], childEnv);
     if (!created) warn(`Le compte ${adminEmail} doit d'abord être inscrit et vérifié. Inscrivez-vous puis lancez : npm run admin:create -- --email ${adminEmail}`);
   }
 
   // 6. Vérification + résumé
   step("Vérification");
-  run("npm", ["run", "doctor"]);
+  run("npm", ["run", "doctor"], childEnv);
 
   log("\n\x1b[1m✅ Installation terminée.\x1b[0m");
   log("Prochaines étapes :");
