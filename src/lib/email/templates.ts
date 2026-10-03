@@ -64,6 +64,12 @@ export const templates = {
 
   supportAccessGranted: (p: { orgName: string; staff: string; reason: string; until: string; url: string }) =>
     layout("Accès d'assistance ouvert", [`${p.staff} a ouvert un accès d'assistance temporaire à « ${p.orgName} » jusqu'au ${p.until}.`, `Motif : ${p.reason}`, "Chaque action est journalisée. Vous pouvez révoquer cet accès à tout moment."], { label: "Voir et révoquer", url: p.url }),
+
+  backupFailed: (p: { error: string; url: string }) =>
+    layout("Échec de la sauvegarde", ["La dernière sauvegarde de la plateforme a échoué.", `Erreur : ${p.error}`, "Les sauvegardes précédentes restent disponibles. Corrigez la cause puis relancez une sauvegarde."], { label: "Voir les sauvegardes", url: p.url }),
+
+  backupStale: (p: { since: string; url: string }) =>
+    layout("Sauvegardes en retard", [`Aucune sauvegarde réussie depuis ${p.since}.`, "Vérifiez la tâche planifiée (npm run jobs), la destination de sauvegarde et l'espace disponible."], { label: "Voir les sauvegardes", url: p.url }),
 } satisfies Record<string, (p: never) => RenderedEmail>;
 
 export type TemplateName = keyof typeof templates;

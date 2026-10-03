@@ -195,7 +195,49 @@ export async function applyRetention(now = new Date()) {
   return result;
 }
 
-export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, applyRetention, cleanup } as const;
+/**
+ * Sauvegardes : lance une sauvegarde lorsqu'elle est due, applique la rétention, essaie
+ * une restauration complète chaque semaine (si une base de test est configurée) et
+ * alerte si aucune sauvegarde n'a réussi depuis trop longtemps.
+ */
+export async function backups(now = new Date()) {
+  const { backupDestination } = await import("@/lib/backup/destination");
+  const { isBackupDue, isBackupStale } = await import("@/lib/backup/policy");
+  const svc = await import("@/lib/backup/service");
+  const settings = (await getSettings()).backup;
+  if (!backupDestination() || !settings.enabled) return { skipped: "désactivées ou sans destination" };
+  const result: Record<string, unknown> = {};
+  let last = await svc.lastSuccessfulBackup();
+  if (isBackupDue(last?.startedAt ?? null, settings.frequencyHours, now)) {
+    const run = await svc.runBackup({ trigger: "scheduled" }).catch((e: Error) => ({ status: "failed", error: e.message }) as const);
+    result.backup = run.status;
+    if (run.status === "ok") last = await svc.lastSuccessfulBackup();
+  }
+  result.retention = await svc.applyBackupRetention(now).catch((e: Error) => ({ error: e.message }));
+  if (process.env.BACKUP_RESTORE_TEST_DATABASE_URL && last && (!last.restoreTestedAt || now.getTime() - last.restoreTestedAt.getTime() > 7 * 86400_000)) {
+    const tested = await db
+      .select({ at: schema.backupRun.restoreTestedAt })
+      .from(schema.backupRun)
+      .where(and(isNotNull(schema.backupRun.restoreTestedAt), gt(schema.backupRun.restoreTestedAt, new Date(now.getTime() - 7 * 86400_000))))
+      .limit(1);
+    if (!tested.length) result.restoreTest = (await svc.restoreTest(last.id)).ok ? "ok" : "failed";
+  }
+  if (isBackupStale(last?.startedAt ?? null, settings.frequencyHours, now)) {
+    const to = settings.alertEmail || (await getSettings()).brand.supportEmail;
+    if (to && !to.endsWith(".invalid")) {
+      await sendEmail({
+        to,
+        template: "backupStale",
+        email: templates.backupStale({ since: last ? formatDateTime(last.startedAt) : "la mise en service", url: `${appUrl()}/admin/sauvegardes` }),
+        dedupeKey: `backup-stale:${now.toISOString().slice(0, 10)}`,
+      });
+      result.alert = "envoyée";
+    }
+  }
+  return result;
+}
+
+export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, applyRetention, cleanup, backups } as const;
 
 export async function runAllJobs(now = new Date()) {
   await getSettings(true);

@@ -88,6 +88,17 @@ export const settingsSchema = z.object({
     mode: z.enum(["minimal", "consent", "off"]),
     note: text(2000),
   }),
+  backup: z.object({
+    /** Sauvegardes automatiques (la destination et la clé de chiffrement restent dans l'environnement). */
+    enabled: z.boolean(),
+    frequencyHours: z.union([z.literal(6), z.literal(12), z.literal(24), z.literal(168)]),
+    /** Rétention « grand-père / père / fils » : dernières sauvegardes par jour, semaine et mois. */
+    keepDaily: z.number().int().min(1).max(90),
+    keepWeekly: z.number().int().min(0).max(52),
+    keepMonthly: z.number().int().min(0).max(120),
+    /** Destinataire des alertes (échec, sauvegarde trop ancienne). Vide = email d'assistance. */
+    alertEmail: text(254).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Email invalide"),
+  }),
 });
 
 export type PlatformSettings = z.infer<typeof settingsSchema>;
@@ -136,6 +147,7 @@ export function defaultSettings(): PlatformSettings {
       mode: process.env.ANALYTICS_MODE === "off" ? "off" : process.env.ANALYTICS_REQUIRE_CONSENT === "true" ? "consent" : "minimal",
       note: "",
     },
+    backup: { enabled: true, frequencyHours: 24, keepDaily: 7, keepWeekly: 4, keepMonthly: 6, alertEmail: env("BACKUP_ALERT_EMAIL") },
   };
 }
 
@@ -154,6 +166,7 @@ export function mergeSettings(stored: unknown): PlatformSettings {
       (Object.keys(base.legal) as LegalPageKey[]).map((k) => [k, { ...base.legal[k], ...((s.legal?.[k] as object) ?? {}) }]),
     ),
     analytics: { ...base.analytics, ...(s.analytics ?? {}) },
+    backup: { ...base.backup, ...(s.backup ?? {}) },
   };
   const parsed = settingsSchema.safeParse(merged);
   return parsed.success ? parsed.data : base;

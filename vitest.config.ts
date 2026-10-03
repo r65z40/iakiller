@@ -12,6 +12,7 @@ export default defineConfig({
       NODE_ENV: "test",
       DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://cartes:cartes@localhost:5432/cartes_test",
       LOCAL_STORAGE_DIR: "./storage-test",
+      BACKUP_DIR: "./backups-test",
       EMAIL_MODE: "log",
       BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-123",
       APP_URL: "http://localhost:3000",

@@ -93,13 +93,14 @@ export type PlatformPermission =
   | "platform.support.access"
   | "platform.service.manage"
   | "platform.settings.manage"
-  | "platform.audit.view";
+  | "platform.audit.view"
+  | "platform.backups.manage";
 
 const PLATFORM_MATRIX: Record<PlatformRole, PlatformPermission[]> = {
   admin: [
     "platform.view", "platform.orgs.suspend", "platform.cards.suspend", "platform.plans.manage",
     "platform.billing.sync", "platform.finance.export", "platform.support.respond", "platform.support.access",
-    "platform.service.manage", "platform.settings.manage", "platform.audit.view",
+    "platform.service.manage", "platform.settings.manage", "platform.audit.view", "platform.backups.manage",
   ],
   support: [
     "platform.view", "platform.cards.suspend", "platform.support.respond", "platform.support.access",

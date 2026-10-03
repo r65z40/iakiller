@@ -2,6 +2,8 @@
 
 SaaS de cartes de visite numériques pour artisans, indépendants, commerciaux, TPE et PME : éditeur par blocs, page publique mobile `/{entreprise}/{personne}`, QR code stable, vCard, formulaire de prospects, statistiques expliquées, équipes, abonnements Stripe, création accompagnée, administration.
 
+**Guides** : [Installation](docs/INSTALLATION.md) · [Fonctionnalités](docs/FONCTIONNALITES.md) · [Sauvegardes](docs/SAUVEGARDE.md)
+
 Documents : [PRODUCT_SPEC](PRODUCT_SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md) · [Permissions](docs/PERMISSIONS.md) · [États d'abonnement](docs/ETATS-ABONNEMENT.md) · [Statistiques](docs/STATISTIQUES.md) · [Stripe](docs/STRIPE.md) · [Exploitation](docs/EXPLOITATION.md)
 
 ## Prérequis
@@ -9,7 +11,9 @@ Documents : [PRODUCT_SPEC](PRODUCT_SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) �
 - Node.js 22 (20.9 minimum)
 - PostgreSQL 16
 
-## Installation locale
+## Installation locale (résumé)
+
+Guide complet, y compris la mise en production sur un serveur : [docs/INSTALLATION.md](docs/INSTALLATION.md). Après installation, `npm run doctor` vérifie toute la configuration.
 
 ```bash
 npm install
@@ -55,6 +59,10 @@ npm run jobs             # une exécution (cron toutes les 15 min)
 npm run jobs -- --watch  # boucle continue
 ```
 
+## Sauvegardes
+
+Base de données et fichiers, chiffrés, incrémentaux, vérifiés, avec essai de restauration automatique et alertes : `/admin/sauvegardes` et `npm run backup`. Voir [docs/SAUVEGARDE.md](docs/SAUVEGARDE.md).
+
 ## Apple Wallet et Google Wallet
 
 Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (procédure dans [docs/WALLET.md](docs/WALLET.md)). Sans elles, les boutons sont masqués.
@@ -64,7 +72,7 @@ Facultatifs : configurez les variables `APPLE_WALLET_*` et `GOOGLE_WALLET_*` (pr
 ```bash
 npm run typecheck
 npm run lint
-npm test                 # 90 tests unitaires et d'intégration (base cartes_test requise)
+npm test                 # 101 tests unitaires et d'intégration (base cartes_test requise)
 npm run test:e2e         # 6 parcours Playwright (base cartes_e2e requise)
 npm run build
 ```
@@ -73,7 +81,7 @@ Bases de test : `createdb -O cartes cartes_test && createdb -O cartes cartes_e2e
 
 ## Déploiement, sauvegarde, restauration
 
-Voir [docs/EXPLOITATION.md](docs/EXPLOITATION.md) : une instance Node.js derrière HTTPS, PostgreSQL géré, bucket S3 privé, SMTP, `npm run jobs` planifié, scripts `scripts/ops/backup.sh` et `scripts/ops/restore.sh` (restauration testée).
+Voir [docs/INSTALLATION.md](docs/INSTALLATION.md) (serveur, services systemd et HTTPS fournis dans `deploy/`), [docs/EXPLOITATION.md](docs/EXPLOITATION.md) et [docs/SAUVEGARDE.md](docs/SAUVEGARDE.md).
 
 ## Réglages de la plateforme (administration)
 

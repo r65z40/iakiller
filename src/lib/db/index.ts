@@ -7,9 +7,14 @@ export type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 
 const globalForDb = globalThis as unknown as { __pgPool?: Pool; __db?: DB };
 
+/** Adresse de la base (valeur de développement par défaut). */
+export function databaseUrl(): string {
+  return process.env.DATABASE_URL ?? "postgres://cartes:cartes@localhost:5432/cartes_dev";
+}
+
 function createPool(): Pool {
   return new Pool({
-    connectionString: process.env.DATABASE_URL ?? "postgres://cartes:cartes@localhost:5432/cartes_dev",
+    connectionString: databaseUrl(),
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),
   });
 }
