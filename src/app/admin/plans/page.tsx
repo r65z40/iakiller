@@ -7,7 +7,9 @@ import { annualSaving, suggestedAnnualCents } from "@/lib/billing/pricing";
 import Link from "next/link";
 import { Badge, Button, PageHeader, Panel } from "@/components/ui";
 import { Flash } from "../_lib/Flash";
-import { setPriceAction, updateOfferAction, updatePlanAction } from "../_lib/actions";
+import { setPriceAction, updateOfferAction, updatePlanAction, syncStripePricesAction } from "../_lib/actions";
+import { SubmitButton } from "@/components/ui/ActionForm";
+import { billingMode } from "@/lib/billing/stripe";
 
 const input = "mt-1 block min-h-10 w-full rounded-lg border border-line px-3 text-sm";
 
@@ -20,6 +22,18 @@ export default async function AdminPlans({ searchParams }: PageProps<"/admin/pla
     <>
       <PageHeader title="Plans, prix et prestations" description="Montants en euros, stockés en centimes. Les prix Stripe se créent dans le tableau de bord Stripe (mode test d'abord) puis s'associent ici." />
       <Flash sp={sp} />
+      <div className="mb-4 rounded-lg bg-surface p-4">
+        {billingMode() === "disabled" ? (
+          <p className="text-sm text-muted">
+            Paiement non configuré. Renseignez <code>STRIPE_SECRET_KEY</code> (et <code>STRIPE_WEBHOOK_SECRET</code>) dans l&apos;environnement, puis cliquez sur « Créer les prix dans Stripe » : les produits et prix seront créés automatiquement et les identifiants remplis ici.
+          </p>
+        ) : (
+          <form action={syncStripePricesAction} className="flex flex-wrap items-center gap-3">
+            <SubmitButton pendingLabel="Création dans Stripe…">Créer / synchroniser les prix dans Stripe {billingMode() === "live" ? "(PRODUCTION)" : "(test)"}</SubmitButton>
+            <span className="text-sm text-muted">Crée dans Stripe les produits et prix récurrents manquants, enregistre les identifiants et retire le marquage « démonstration ». Les prix déjà associés sont conservés.</span>
+          </form>
+        )}
+      </div>
       <p className="mb-4 text-sm text-muted">Remise annuelle de référence : <strong>{discount} %</strong> (<Link href="/admin/reglages?section=tarification" className="text-brand underline">modifier</Link>). La remise affichée aux clients est toujours calculée à partir des prix réels enregistrés ci-dessous.</p>
       <div className="space-y-6">
         {plans.map(({ plan, monthly, yearly }) => (

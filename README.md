@@ -11,9 +11,17 @@ Documents : [PRODUCT_SPEC](PRODUCT_SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) �
 - Node.js 22 (20.9 minimum)
 - PostgreSQL 16
 
-## Installation locale (résumé)
+## Installation en une commande
 
-Guide complet, y compris la mise en production sur un serveur : [docs/INSTALLATION.md](docs/INSTALLATION.md). Après installation, `npm run doctor` vérifie toute la configuration.
+```bash
+git clone <adresse du dépôt> macartepro && cd macartepro
+./install.sh          # interactif : dépendances, secrets, base, migrations, données de départ
+npm run dev           # http://localhost:3000
+```
+
+`./install.sh --yes` installe sans poser de question (valeurs locales par défaut). La configuration guidée seule (si les dépendances sont déjà installées) : `npm run setup`. À tout moment, `npm run doctor` vérifie la configuration.
+
+Guide complet (dont la mise en production) : [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ```bash
 npm install

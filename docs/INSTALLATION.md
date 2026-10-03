@@ -42,43 +42,39 @@ brew install node@22 postgresql@16
 brew services start postgresql@16
 ```
 
-### 1.2 Récupérer le code et les dépendances
+### 1.2 Installer en une commande
 
 ```bash
-git clone <adresse du dépôt> carto
-cd carto
+git clone <adresse du dépôt> macartepro
+cd macartepro
+./install.sh          # ou ./install.sh --yes pour tout accepter par défaut
+npm run dev           # http://localhost:3000
+```
+
+`./install.sh` installe les dépendances puis lance la configuration guidée (`npm run setup`), qui :
+génère les secrets (clé d'authentification, clé de chiffrement des sauvegardes), écrit `.env`,
+crée la base en local si elle n'existe pas, applique les migrations, insère les données de
+démonstration, propose de créer l'administrateur, puis lance le diagnostic `npm run doctor`.
+
+C'est tout pour un poste de développement. Les sections suivantes détaillent les étapes
+manuelles, utiles pour comprendre ou personnaliser l'installation — elles sont facultatives si
+`./install.sh` a réussi.
+
+<details>
+<summary>Étapes manuelles équivalentes (facultatif)</summary>
+
+```bash
 npm install
-```
-
-### 1.3 Créer la base de données
-
-```bash
-sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD 'cartes' CREATEDB;"
-sudo -u postgres createdb -O cartes cartes_dev
-```
-
-### 1.4 Configurer
-
-```bash
 cp .env.example .env
-```
-
-Dans `.env`, renseignez au minimum :
-
-```bash
-DATABASE_URL=postgres://cartes:cartes@localhost:5432/cartes_dev
-BETTER_AUTH_SECRET=<résultat de : openssl rand -base64 48>
-```
-
-Les autres valeurs peuvent rester par défaut. Les emails ne partent pas (`EMAIL_MODE=log`), les fichiers vont dans `./storage`, Stripe est désactivé et les sauvegardes vont dans `./backups`.
-
-### 1.5 Initialiser et lancer
-
-```bash
+# Renseigner DATABASE_URL et BETTER_AUTH_SECRET (openssl rand -base64 48)
+sudo -u postgres psql -c "CREATE USER cartes WITH PASSWORD 'cartes' CREATEDB;"
+sudo -u postgres createdb -O cartes macartepro
 npm run db:migrate   # crée les tables
-npm run db:seed      # plans, prestation et organisation de démonstration
+npm run db:seed      # formules et organisation de démonstration
 npm run dev          # http://localhost:3000
 ```
+
+</details>
 
 Pour vous connecter, utilisez le compte de démonstration `demo@exemple.test` (mot de passe `demo-carte-2026`). Une carte publique d'exemple est visible sur http://localhost:3000/atelier-exemple/camille-moreau-atelier-moreau.
 

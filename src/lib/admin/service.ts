@@ -103,6 +103,60 @@ export async function setPlanPrice(staff: Staff, planId: string, input: { interv
   await audit({ actorUserId: staff.id, actorType: "staff", action: "admin.price_set", targetId: planId, metadata: input });
 }
 
+/**
+ * Crée dans Stripe les produits et les prix récurrents manquants, puis enregistre les
+ * identifiants de prix. Idempotent : un prix qui a déjà un identifiant Stripe est ignoré.
+ * Un produit Stripe est réutilisé par plan (repéré par metadata.plan_id). Évite la saisie
+ * manuelle des « price_… » et retire le marquage « démonstration ».
+ */
+export async function syncStripePrices(staff: Staff): Promise<{ created: number; skipped: number; details: string[] }> {
+  assert(staff, "platform.plans.manage");
+  const { getStripe, billingMode } = await import("@/lib/billing/stripe");
+  const { listPlans } = await import("@/lib/billing/service");
+  const stripe = getStripe();
+  if (!stripe) throw new DomainError("not_configured", "Stripe n'est pas configuré (STRIPE_SECRET_KEY), ou une clé live est refusée sans STRIPE_ALLOW_LIVE=true.");
+  const mode = billingMode();
+
+  const plans = await listPlans({ activeOnly: false });
+  const details: string[] = [];
+  let created = 0;
+  let skipped = 0;
+
+  async function productForPlan(planId: string, name: string): Promise<string> {
+    const existing = await stripe!.products.list({ active: true, limit: 100 });
+    const found = existing.data.find((p) => p.metadata?.plan_id === planId);
+    if (found) return found.id;
+    const product = await stripe!.products.create({ name, metadata: { plan_id: planId } });
+    return product.id;
+  }
+
+  for (const { plan, monthly, yearly } of plans) {
+    if (!plan.isActive) continue;
+    const prices = [monthly, yearly].filter((p): p is NonNullable<typeof p> => !!p);
+    if (prices.length === 0) continue;
+    let productId: string | null = null;
+    for (const price of prices) {
+      if (price.stripePriceId) { skipped++; continue; }
+      if (!productId) productId = await productForPlan(plan.id, plan.name);
+      const sp = await stripe.prices.create({
+        product: productId,
+        unit_amount: price.amountCents,
+        currency: price.currency || "eur",
+        recurring: { interval: price.interval === "year" ? "year" : "month" },
+        tax_behavior: price.taxBehavior === "inclusive" ? "inclusive" : price.taxBehavior === "exclusive" ? "exclusive" : "unspecified",
+        metadata: { plan_id: plan.id, interval: price.interval },
+      });
+      await db.update(schema.planPrice).set({ stripePriceId: sp.id, isDemo: false }).where(eq(schema.planPrice.id, price.id));
+      created++;
+      details.push(`${plan.name} ${price.interval === "year" ? "annuel" : "mensuel"} → ${sp.id}`);
+    }
+    if (plan.isDemo) await db.update(schema.plan).set({ isDemo: false, updatedAt: new Date() }).where(eq(schema.plan.id, plan.id));
+  }
+
+  await audit({ actorUserId: staff.id, actorType: "staff", action: "admin.stripe_prices_sync", metadata: { created, skipped, mode } });
+  return { created, skipped, details };
+}
+
 export async function updateServiceOffer(staff: Staff, id: string, input: { name: string; description: string; amountCents: number; includedRevisions: number; targetDays: number | null; stripePriceId: string | null; isActive: boolean; isDemo: boolean }) {
   assert(staff, "platform.plans.manage");
   if (input.stripePriceId && !/^price_[A-Za-z0-9]+$/.test(input.stripePriceId)) throw new DomainError("invalid", "Identifiant de prix Stripe invalide.");
