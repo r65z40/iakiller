@@ -5,10 +5,25 @@ import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   await getSettings();
+  const description = "Créez et partagez une carte de visite numérique professionnelle : QR code permanent, fiche contact vCard, formulaire de demandes et statistiques. Essai gratuit 7 jours, sans carte bancaire.";
   return {
     metadataBase: new URL(appUrl()),
     title: { default: `${brand.name} – ${brand.tagline}`, template: `%s – ${brand.name}` },
-    description: "Créez et partagez des cartes de visite numériques professionnelles, avec QR code, statistiques et formulaire de contact.",
+    description,
+    applicationName: brand.name,
+    keywords: ["carte de visite numérique", "carte de visite digitale", "QR code carte de visite", "vCard", "carte de visite virtuelle", "carte de visite connectée", "artisan", "indépendant", "PME"],
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      siteName: brand.name,
+      locale: "fr_FR",
+      url: appUrl(),
+      title: `${brand.name} – ${brand.tagline}`,
+      description,
+    },
+    twitter: { card: "summary_large_image", title: `${brand.name} – ${brand.tagline}`, description },
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+    formatDetection: { telephone: false },
   };
 }
 

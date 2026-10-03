@@ -1,55 +1,215 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight } from "lucide-react";
 import { brand } from "@/lib/config";
+import { listPlans } from "@/lib/billing/service";
 import { DemoCard } from "@/components/site/DemoCard";
+import { DEMO_CARDS } from "@/lib/cards/demo";
+import { TEMPLATE_PRESETS } from "@/lib/cards/defaults";
+import { JsonLd, organizationLd, websiteLd, softwareLd, pageMeta } from "@/lib/seo";
+import { HOME_FAQ } from "@/lib/content/faq";
 
-const POINTS = [
-  ["Une carte toujours à jour", "Changement de numéro, nouveau poste : modifiez la carte, le QR code imprimé reste valable."],
-  ["Prête à partager", "Lien court, QR code PNG ou SVG à imprimer, et fiche contact (vCard) à enregistrer en un geste."],
-  ["Pensée pour le mobile", "Grands boutons d'appel et d'email, lisible au soleil, rapide même en 4G faible."],
-  ["Des demandes de contact", "Formulaire intégré, demandes reçues dans votre espace, sans abonnement marketing imposé au visiteur."],
-  ["Statistiques expliquées", "Ouvertures, clics et sources, avec la définition de chaque chiffre et ses limites."],
-  ["Pour toute l'équipe", "Charte graphique commune, champs verrouillés, désactivation immédiate d'un salarié sortant."],
+export const dynamic = "force-dynamic";
+
+export function generateMetadata(): Metadata {
+  return pageMeta({
+    description:
+      "La carte de visite numérique des artisans, indépendants et PME : éditeur simple, QR code permanent, fiche contact vCard, formulaire de demandes et statistiques claires. Essai gratuit 7 jours, sans carte bancaire.",
+    path: "/",
+  });
+}
+
+const STEPS = [
+  { icon: IdCard, title: "Créez votre carte", text: "Un éditeur par blocs, en quelques minutes. Vos coordonnées, vos liens, vos photos, vos horaires — glissés-déposés, aperçu en direct." },
+  { icon: QrCode, title: "Partagez-la partout", text: "Un lien court et un QR code à imprimer sur vos supports. Le visiteur vous appelle ou enregistre votre contact en un geste." },
+  { icon: Inbox, title: "Recevez des demandes", text: "Un formulaire intégré : les demandes arrivent dans votre espace, avec des statistiques honnêtes et expliquées." },
 ];
 
-export default function Home() {
+const FEATURES = [
+  { icon: RefreshCw, title: "Toujours à jour", text: "Changement de numéro ou de poste : vous modifiez la carte, le QR code déjà imprimé reste valable." },
+  { icon: IdCard, title: "Fiche contact (vCard)", text: "« Ajouter aux contacts » enregistre nom, téléphones, email et adresse d'un seul geste." },
+  { icon: Smartphone, title: "Pensée pour le mobile", text: "Grands boutons d'appel, lisible au soleil, rapide même en 4G faible. Compatible Apple et Google Wallet." },
+  { icon: Inbox, title: "Des demandes de contact", text: "Formulaire intégré, sans abonnement marketing imposé au visiteur, avec protection anti-spam." },
+  { icon: BarChart3, title: "Statistiques expliquées", text: "Ouvertures, clics et sources — avec la définition de chaque chiffre et ses limites. Aucun chiffre trompeur." },
+  { icon: Users, title: "Pour toute l'équipe", text: "Charte graphique commune, champs verrouillés, import CSV des salariés, désactivation immédiate d'un départ." },
+];
+
+const PERSONAS = [
+  { title: "Artisans & indépendants", text: "Une carte pro, un QR code sur le devis et le véhicule, vos avis et votre galerie de réalisations." },
+  { title: "Commerciaux & freelances", text: "Partagez par SMS ou en rendez-vous, mesurez ce qui marche, capturez les demandes entrantes." },
+  { title: "TPE & PME", text: "Équipez toute l'équipe d'un coup, gardez une charte cohérente, gérez les arrivées et les départs." },
+];
+
+const COMPARISON: [string, boolean, string][] = [
+  ["Se met à jour sans réimprimer", true, "Carte papier : à refaire à chaque changement"],
+  ["Enregistrement du contact en 1 clic", true, "Papier : ressaisie manuelle"],
+  ["Appel, email, itinéraire, WhatsApp", true, "Papier : lecture seule"],
+  ["Vous savez ce qui est consulté", true, "Papier : aucune mesure"],
+  ["Zéro impression, zéro perte", true, "Papier : stock à gérer, cartes perdues"],
+];
+
+export default async function Home() {
+  const plans = await listPlans().catch(() => []);
+  const entry = plans[0]?.monthly ?? null;
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-soft to-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 lg:grid-cols-2">
+      <JsonLd data={[organizationLd(), websiteLd(), softwareLd()]} />
+
+      {/* Héros */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-brand-soft via-white to-white">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl" aria-hidden />
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:py-20">
           <div>
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">La carte de visite numérique des artisans, indépendants et PME.</h1>
-            <p className="mt-5 text-lg text-muted">Créez votre carte en quelques minutes avec un éditeur simple, partagez-la par QR code ou par lien, et recevez des demandes de contact. Ou confiez sa création à notre équipe.</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-brand ring-1 ring-brand/20">
+              <Sparkles className="h-4 w-4" /> Essai gratuit 7 jours, sans carte bancaire
+            </span>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">
+              La carte de visite <span className="text-brand">numérique</span> des artisans, indépendants et PME.
+            </h1>
+            <p className="mt-5 max-w-xl text-lg text-muted">
+              Créez votre carte en quelques minutes, partagez-la par QR code ou par lien, et recevez des demandes de contact. Ou confiez sa création à notre équipe.
+            </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/inscription" className="rounded-lg bg-brand px-5 py-3 font-semibold text-white hover:bg-brand-dark">Essayer 7 jours gratuitement</Link>
-              <Link href="/modeles" className="rounded-lg bg-white px-5 py-3 font-semibold ring-1 ring-line hover:bg-surface">Voir des exemples</Link>
+              <Link href="/inscription" className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-dark">
+                Créer ma carte gratuitement <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/modeles" className="rounded-lg bg-white px-5 py-3 font-semibold ring-1 ring-line transition hover:bg-surface">Voir des exemples</Link>
             </div>
-            <p className="mt-4 text-sm text-muted">Sans carte bancaire · jusqu&apos;à 3 cartes pendant l&apos;essai · rien n&apos;est facturé automatiquement à la fin.</p>
+            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
+              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Sans carte bancaire</li>
+              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Sans cookie de suivi par défaut</li>
+              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> QR code permanent</li>
+              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Conçue pour le RGPD</li>
+            </ul>
           </div>
-          <div className="mx-auto w-full max-w-sm">
+          <div className="relative mx-auto w-full max-w-sm">
+            <div className="absolute inset-0 -z-10 translate-x-6 translate-y-6 rounded-[2rem] bg-brand/10" aria-hidden />
             <DemoCard id="classique" />
-            <p className="mt-2 text-center text-xs text-muted">Exemple fictif réalisé avec {brand.name}.</p>
+            <p className="mt-3 text-center text-xs text-muted">Exemple interactif et fictif réalisé avec {brand.name}.</p>
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="text-2xl font-extrabold">Ce que vous obtenez</h2>
-        <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {POINTS.map(([t, d]) => (
-            <li key={t} className="rounded-xl p-5 ring-1 ring-line">
-              <h3 className="font-bold">{t}</h3>
-              <p className="mt-1 text-sm text-muted">{d}</p>
+
+      {/* 3 étapes */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <h2 className="text-center text-3xl font-extrabold">Votre carte en ligne en trois étapes</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-muted">Pas besoin d&apos;être à l&apos;aise avec l&apos;informatique : tout se fait depuis votre téléphone ou votre ordinateur.</p>
+        <ol className="mt-10 grid gap-6 md:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="relative rounded-2xl bg-surface p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white"><s.icon className="h-6 w-6" /></div>
+              <p className="mt-4 text-sm font-semibold text-brand">Étape {i + 1}</p>
+              <h3 className="mt-1 text-lg font-bold">{s.title}</h3>
+              <p className="mt-1 text-sm text-muted">{s.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Fonctions */}
+      <section className="bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-3xl font-extrabold">Tout ce qu&apos;une carte papier ne sait pas faire</h2>
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="rounded-2xl bg-white p-6 ring-1 ring-line transition hover:shadow-md">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-soft text-brand"><f.icon className="h-5 w-5" /></div>
+                <h3 className="mt-4 font-bold">{f.title}</h3>
+                <p className="mt-1 text-sm text-muted">{f.text}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Modèles */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-3xl font-extrabold">Un design soigné, un modèle pour chaque style</h2>
+            <p className="mt-2 max-w-2xl text-muted">Trois présentations du même contenu : changez à tout moment, personnalisez les couleurs, la police et le logo.</p>
+          </div>
+          <Link href="/modeles" className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">Explorer les modèles <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+        <ul className="mt-10 grid gap-8 lg:grid-cols-3">
+          {DEMO_CARDS.map((d) => (
+            <li key={d.id}>
+              <h3 className="text-lg font-bold">{d.template}</h3>
+              <p className="mb-3 text-sm text-muted">{TEMPLATE_PRESETS[d.id as keyof typeof TEMPLATE_PRESETS]?.description}</p>
+              <DemoCard id={d.id} />
             </li>
           ))}
         </ul>
       </section>
+
+      {/* Personas */}
       <section className="bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-4 py-12">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-3xl font-extrabold">Faite pour votre métier</h2>
+          <ul className="mt-8 grid gap-5 md:grid-cols-3">
+            {PERSONAS.map((p) => (
+              <li key={p.title} className="rounded-2xl bg-white p-6 ring-1 ring-line">
+                <h3 className="font-bold">{p.title}</h3>
+                <p className="mt-1 text-sm text-muted">{p.text}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Comparaison */}
+      <section className="mx-auto max-w-4xl px-4 py-16">
+        <h2 className="text-center text-3xl font-extrabold">Numérique ou papier ?</h2>
+        <ul className="mx-auto mt-8 max-w-2xl space-y-3">
+          {COMPARISON.map(([good, , bad]) => (
+            <li key={good} className="flex flex-col gap-1 rounded-xl p-4 ring-1 ring-line sm:flex-row sm:items-center sm:justify-between">
+              <span className="inline-flex items-center gap-2 font-semibold"><Check className="h-5 w-5 shrink-0 text-success" /> {good}</span>
+              <span className="pl-7 text-sm text-muted sm:pl-0">{bad}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Tarifs teaser */}
+      <section className="bg-brand">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-4 py-14 text-white">
+          <div>
+            <h2 className="text-3xl font-extrabold">Essayez gratuitement pendant 7 jours</h2>
+            <p className="mt-2 max-w-xl text-white/85">
+              Jusqu&apos;à 3 cartes pendant l&apos;essai, sans carte bancaire. Toutes les fonctions sont incluses dans chaque formule — seuls les quotas changent.
+              {entry ? " Des formules mensuelles et annuelles pour tous les besoins." : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/inscription" className="rounded-lg bg-white px-5 py-3 font-semibold text-brand transition hover:bg-brand-soft">Commencer l&apos;essai</Link>
+            <Link href="/tarifs" className="rounded-lg px-5 py-3 font-semibold text-white ring-1 ring-white/40 transition hover:bg-white/10">Voir les tarifs</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Création accompagnée */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl bg-surface p-8">
           <div>
             <h2 className="text-2xl font-extrabold">Pas le temps de la faire vous-même ?</h2>
-            <p className="mt-2 text-muted">Envoyez-nous un brief : nous réalisons la carte, vous la validez avant toute publication.</p>
+            <p className="mt-2 max-w-xl text-muted">Envoyez-nous un brief : notre équipe réalise la carte, vous la validez avant toute publication.</p>
           </div>
           <Link href="/creation-accompagnee" className="rounded-lg bg-ink px-5 py-3 font-semibold text-white">Découvrir la création accompagnée</Link>
         </div>
+      </section>
+
+      {/* FAQ teaser */}
+      <section className="mx-auto max-w-3xl px-4 pb-20">
+        <h2 className="text-center text-3xl font-extrabold">Questions fréquentes</h2>
+        <div className="mt-8 space-y-3">
+          {HOME_FAQ.map(([q, a]) => (
+            <details key={q} className="rounded-xl p-4 ring-1 ring-line">
+              <summary className="cursor-pointer font-semibold">{q}</summary>
+              <p className="mt-2 text-muted">{a}</p>
+            </details>
+          ))}
+        </div>
+        <p className="mt-6 text-center text-sm"><Link href="/faq" className="font-semibold text-brand hover:underline">Voir toutes les questions →</Link></p>
       </section>
     </>
   );

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { DemoCard } from "@/components/site/DemoCard";
 
-export const metadata: Metadata = { title: "Offre entreprise" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: 'Cartes de visite pour entreprises et équipes', description: 'Équipez toute votre équipe de cartes de visite numériques : charte graphique commune, champs verrouillés, import CSV des salariés, gestion centralisée et départs immédiats.', path: '/entreprise' });
+}
 
 const FEATURES = [
   ["Gestion centralisée", "Créez et attribuez les cartes de vos collaborateurs depuis un seul espace."],
