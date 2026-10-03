@@ -78,7 +78,7 @@ Les scripts `npm run …` chargent désormais `.env` (`--env-file-if-exists`), c
 | 15 | Prestation sans droit d'abonnement ; validation avant publication | `billing.test.ts` « création accompagnée » |
 | 16 | Désactivation → caches et fichiers | médias servis uniquement pour une version publiée et accessible ; pages dynamiques ; cache de 5 minutes documenté |
 | 17 | Fichiers excessifs, faux types, contenus actifs, URL dangereuses | `media-brand.test.ts`, `vcard-urls.test.ts`, `cards.test.ts` (javascript:) |
-| 18 | Tests automatisés et E2E | 101 tests Vitest sur PostgreSQL réel, 6 parcours Playwright |
+| 18 | Tests automatisés et E2E | 117 tests Vitest sur PostgreSQL réel, 6 parcours Playwright |
 
 ## Limites réelles
 

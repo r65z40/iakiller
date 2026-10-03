@@ -52,7 +52,7 @@ src/
     permissions.ts          matrice de permissions centralisée
     context.ts              session → utilisateur → appartenance → droits
 drizzle/                    migrations SQL versionnées
-scripts/                    migrate, seed, jobs, create-admin, backup, doctor
+scripts/                    migrate, seed, jobs, create-admin, backup, doctor, setup
 deploy/                     services systemd (application, tâches), Caddyfile, nginx
 tests/unit, tests/integration (Vitest + PostgreSQL réel), tests/e2e (Playwright)
 ```

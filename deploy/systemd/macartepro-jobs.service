@@ -1,21 +1,21 @@
 # Tâches planifiées (rappels, réconciliation Stripe, conservation, sauvegardes…).
-# Déclenchée par carto-jobs.timer toutes les 15 minutes.
+# Déclenchée par macartepro-jobs.timer toutes les 15 minutes.
 [Unit]
 Description=Tâches planifiées des cartes de visite
 After=network-online.target postgresql.service
 
 [Service]
 Type=oneshot
-User=carto
-Group=carto
-WorkingDirectory=/opt/carto
-EnvironmentFile=/opt/carto/.env
+User=macartepro
+Group=macartepro
+WorkingDirectory=/opt/macartepro
+EnvironmentFile=/opt/macartepro/.env
 Environment=NODE_ENV=production
-Environment=npm_config_cache=/opt/carto/.npm
+Environment=npm_config_cache=/opt/macartepro/.npm
 ExecStart=/usr/bin/npm run jobs
 TimeoutStartSec=3h
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/carto/storage /opt/carto/backups /opt/carto/.npm
+ReadWritePaths=/opt/macartepro/storage /opt/macartepro/backups /opt/macartepro/.npm

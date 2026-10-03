@@ -31,7 +31,7 @@ Dans `.env` (voir aussi `.env.example`) :
 ```bash
 # Destination : bucket DÉDIÉ, chez un autre fournisseur ou dans une autre région que les fichiers.
 BACKUP_DRIVER=s3
-BACKUP_S3_BUCKET=carto-sauvegardes
+BACKUP_S3_BUCKET=macartepro-sauvegardes
 BACKUP_S3_REGION=fr-par
 BACKUP_S3_ENDPOINT=https://s3.fr-par.scw.cloud
 BACKUP_S3_ACCESS_KEY_ID=…
@@ -132,16 +132,16 @@ Sur un nouveau serveur, installé comme décrit dans [INSTALLATION.md](INSTALLAT
 sudo -u postgres createdb -O cartes cartes
 
 # 3. Choisir la sauvegarde.
-sudo -u carto npm run backup -- list
+sudo -u macartepro npm run backup -- list
 
 # 4. Restaurer la base et les fichiers (vers le stockage configuré par STORAGE_DRIVER).
-sudo -u carto npm run backup -- restore latest --target-db "$DATABASE_URL" --media --replace-current
+sudo -u macartepro npm run backup -- restore latest --target-db "$DATABASE_URL" --media --replace-current
 
 # 5. Appliquer les migrations éventuellement plus récentes que la sauvegarde, compiler, démarrer.
-sudo -u carto npm run db:migrate
-sudo -u carto npm run build
-sudo systemctl restart carto
-sudo -u carto npm run doctor
+sudo -u macartepro npm run db:migrate
+sudo -u macartepro npm run build
+sudo systemctl restart macartepro
+sudo -u macartepro npm run doctor
 ```
 
 Ici `--replace-current` est attendu : la base cible est celle que l'application va utiliser. Comme elle est neuve, il n'y a rien à écraser.
@@ -162,7 +162,7 @@ Ici `--replace-current` est attendu : la base cible est celle que l'application 
 ```bash
 git checkout <commit précédent> && npm ci && npm run build
 npm run backup -- restore <id de la sauvegarde d'avant mise à jour> --target-db "$DATABASE_URL" --replace-current
-sudo systemctl restart carto
+sudo systemctl restart macartepro
 ```
 
 ### Après une restauration

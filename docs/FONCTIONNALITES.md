@@ -245,7 +245,7 @@ Rôle `support` : consultation, suspension de cartes, réponses aux tickets, acc
 
 ## 14. Tâches automatiques
 
-`npm run jobs` toutes les 15 minutes (installé par `deploy/systemd/carto-jobs.timer`) :
+`npm run jobs` toutes les 15 minutes (installé par `deploy/systemd/macartepro-jobs.timer`) :
 
 | Tâche | Rôle |
 |---|---|
