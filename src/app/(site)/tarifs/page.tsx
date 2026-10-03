@@ -4,8 +4,12 @@ import { listPlans } from "@/lib/billing/service";
 import { PriceTag } from "@/components/billing/PriceTag";
 import { Alert } from "@/components/ui";
 import { getSettings } from "@/lib/settings/store";
+import { JsonLd, pageMeta, breadcrumbLd } from "@/lib/seo";
+import { appUrl, brand } from "@/lib/config";
 
-export const metadata: Metadata = { title: "Tarifs" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: "Tarifs", description: "Essai gratuit 7 jours sans carte bancaire, puis des formules mensuelles ou annuelles. Toutes les fonctions incluses dans chaque formule : seuls les quotas de cartes, membres et stockage changent.", path: "/tarifs" });
+}
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
@@ -13,6 +17,7 @@ export default async function PricingPage() {
   const demo = plans.some((p) => p.plan.isDemo || p.monthly?.isDemo || p.yearly?.isDemo);
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
+      <JsonLd data={[breadcrumbLd([{ name: "Accueil", path: "/" }, { name: "Tarifs", path: "/tarifs" }]), ...(demo ? [] : plans.filter((p) => p.monthly?.stripePriceId || p.monthly).map((p) => ({ "@context": "https://schema.org", "@type": "Product", name: `${brand.name} – ${p.plan.name}`, description: p.plan.description || undefined, offers: p.monthly ? { "@type": "Offer", price: (p.monthly.amountCents / 100).toFixed(2), priceCurrency: "EUR", url: `${appUrl()}/tarifs` } : undefined }))) ]} />
       <h1 className="text-3xl font-extrabold">Tarifs</h1>
       <p className="mt-2 text-muted">Essai gratuit de 7 jours, sans carte bancaire. Formules mensuelles ou annuelles, sans engagement au-delà de la période payée.</p>
       {demo && <div className="mt-6"><Alert tone="warning" title="Tarifs non définitifs">Les montants affichés sont des valeurs de démonstration. Les tarifs définitifs seront publiés à l&apos;ouverture commerciale.</Alert></div>}

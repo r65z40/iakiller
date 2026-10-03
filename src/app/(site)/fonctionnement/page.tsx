@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Fonctionnement" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: 'Comment ça marche', description: 'Créez votre carte de visite numérique par blocs, publiez-la, partagez le QR code et le lien, recevez des demandes. Découvrez chaque étape du service.', path: '/fonctionnement' });
+}
 
 const STEPS = [
   ["Créez votre compte", "Inscription avec votre email, que vous confirmez. L'essai de 7 jours démarre à la création de votre organisation."],

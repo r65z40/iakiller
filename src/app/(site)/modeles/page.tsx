@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { DEMO_CARDS } from "@/lib/cards/demo";
 import { TEMPLATE_PRESETS } from "@/lib/cards/defaults";
 import { DemoCard } from "@/components/site/DemoCard";
 
-export const metadata: Metadata = { title: "Modèles" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: 'Modèles de carte de visite numérique', description: 'Trois modèles — Classique, Portrait, Entreprise — pour présenter le même contenu. Démonstrations interactives et personnalisables : couleurs, police, logo et arrondis.', path: '/modeles' });
+}
 
 export default function TemplatesPage() {
   return (

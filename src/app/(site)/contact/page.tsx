@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { brand } from "@/lib/config";
 import { ContactForm } from "./ContactForm";
 
-export const metadata: Metadata = { title: "Contact" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: 'Contact', description: 'Une question sur les cartes de visite numériques ? Contactez notre équipe.', path: '/contact' });
+}
 
 export default function ContactPage() {
   return (

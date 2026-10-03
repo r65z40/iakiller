@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { listActiveOffers } from "@/lib/services/orders";
 import { formatMoney } from "@/lib/format";
@@ -6,7 +7,9 @@ import { Alert } from "@/components/ui";
 import { getSettings } from "@/lib/settings/store";
 import { RichText } from "@/components/card/RichText";
 
-export const metadata: Metadata = { title: "Création accompagnée" };
+export function generateMetadata(): Metadata {
+  return pageMeta({ title: 'Création accompagnée de votre carte', description: "Pas le temps de la créer ? Notre équipe réalise votre carte de visite numérique à partir d'un brief ; vous la validez avant toute publication.", path: '/creation-accompagnee' });
+}
 export const dynamic = "force-dynamic";
 
 export default async function GuidedCreation() {
