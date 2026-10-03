@@ -4,7 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { appUrl, brand } from "@/lib/config";
+import { appUrl, brand, envAppUrl } from "@/lib/config";
 import { sendEmail } from "@/lib/email/send";
 import { templates } from "@/lib/email/templates";
 import { newId } from "@/lib/ids";
@@ -17,7 +17,8 @@ export const auth = betterAuth({
   appName: brand.name,
   baseURL: appUrl(),
   secret: process.env.BETTER_AUTH_SECRET,
-  trustedOrigins: [appUrl()],
+  // Domaine réglé dans l'administration + URL technique (APP_URL).
+  trustedOrigins: () => [...new Set([envAppUrl(), appUrl()])],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

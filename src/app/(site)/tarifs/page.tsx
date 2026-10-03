@@ -3,12 +3,13 @@ import Link from "next/link";
 import { listPlans } from "@/lib/billing/service";
 import { PriceTag } from "@/components/billing/PriceTag";
 import { Alert } from "@/components/ui";
+import { getSettings } from "@/lib/settings/store";
 
 export const metadata: Metadata = { title: "Tarifs" };
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
-  const plans = await listPlans();
+  const [plans, settings] = await Promise.all([listPlans(), getSettings()]);
   const demo = plans.some((p) => p.plan.isDemo || p.monthly?.isDemo || p.yearly?.isDemo);
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -38,7 +39,7 @@ export default async function PricingPage() {
           ))}
         </ul>
       )}
-      <p className="mt-6 text-sm text-muted">Toutes les fonctions sont disponibles dans chaque formule ; seuls les quotas changent. Les modalités de TVA seront précisées sur chaque prix.</p>
+      <p className="mt-6 text-sm text-muted">Toutes les fonctions sont disponibles dans chaque formule ; seuls les quotas changent. {settings.billing.taxNote || "Les modalités de TVA seront précisées sur chaque prix."}</p>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { getSettings } from "@/lib/settings/store";
 import { NextResponse } from "next/server";
 import { headers as nextHeaders } from "next/headers";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { clientIp, ipFingerprint } from "@/lib/security/rate-limit";
 import { isSameOrigin } from "@/lib/security/origin";
 
 export async function POST(req: Request) {
+  await getSettings();
   if (!isSameOrigin(req)) return NextResponse.json({ ok: false, error: "Origine refusée." }, { status: 403 });
   const text = await req.text();
   if (text.length > 10_000) return NextResponse.json({ ok: false, error: "Message trop long." }, { status: 413 });

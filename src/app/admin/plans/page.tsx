@@ -2,6 +2,9 @@ import { requireStaffPage } from "@/lib/context";
 import { listPlans } from "@/lib/billing/service";
 import { db, schema } from "@/lib/db";
 import { formatMoney } from "@/lib/format";
+import { getSettings } from "@/lib/settings/store";
+import { annualSaving, suggestedAnnualCents } from "@/lib/billing/pricing";
+import Link from "next/link";
 import { Badge, Button, PageHeader, Panel } from "@/components/ui";
 import { Flash } from "../_lib/Flash";
 import { setPriceAction, updateOfferAction, updatePlanAction } from "../_lib/actions";
@@ -11,11 +14,13 @@ const input = "mt-1 block min-h-10 w-full rounded-lg border border-line px-3 tex
 export default async function AdminPlans({ searchParams }: PageProps<"/admin/plans">) {
   await requireStaffPage("platform.plans.manage");
   const sp = await searchParams;
-  const [plans, offers] = await Promise.all([listPlans({ activeOnly: false }), db.select().from(schema.serviceOffer)]);
+  const [plans, offers, settings] = await Promise.all([listPlans({ activeOnly: false }), db.select().from(schema.serviceOffer), getSettings(true)]);
+  const discount = settings.billing.annualDiscountPercent;
   return (
     <>
       <PageHeader title="Plans, prix et prestations" description="Montants en euros, stockés en centimes. Les prix Stripe se créent dans le tableau de bord Stripe (mode test d'abord) puis s'associent ici." />
       <Flash sp={sp} />
+      <p className="mb-4 text-sm text-muted">Remise annuelle de référence : <strong>{discount} %</strong> (<Link href="/admin/reglages?section=tarification" className="text-brand underline">modifier</Link>). La remise affichée aux clients est toujours calculée à partir des prix réels enregistrés ci-dessous.</p>
       <div className="space-y-6">
         {plans.map(({ plan, monthly, yearly }) => (
           <Panel key={plan.id} title={<>{plan.name} {plan.isDemo && <Badge tone="warning">démonstration</Badge>} {!plan.isActive && <Badge>inactif</Badge>}</>}>
@@ -37,11 +42,21 @@ export default async function AdminPlans({ searchParams }: PageProps<"/admin/pla
                   <form key={interval} action={setPriceAction} className="space-y-2 rounded-lg bg-surface p-3">
                     <input type="hidden" name="planId" value={plan.id} /><input type="hidden" name="interval" value={interval} />
                     <p className="text-sm font-bold">{interval === "month" ? "Prix mensuel" : "Prix annuel"} : {p ? formatMoney(p.amountCents) : "non défini"} {p?.isDemo && <Badge tone="warning">démo</Badge>}</p>
-                    <label className="block text-sm">Montant (€)<input name="amount" inputMode="decimal" defaultValue={p ? (p.amountCents / 100).toFixed(2) : ""} required className={input} /></label>
+                    {interval === "year" && monthly && (
+                      <p className="text-xs text-muted">
+                        Suggestion ({discount} %) : <strong>{formatMoney(suggestedAnnualCents(monthly.amountCents, discount))}</strong>
+                        {yearly && <> · remise réelle actuelle : {annualSaving(monthly.amountCents, yearly.amountCents).percent} %</>}
+                      </p>
+                    )}
+                    <label className="block text-sm">Montant (€)<input name="amount" inputMode="decimal" defaultValue={p ? (p.amountCents / 100).toFixed(2) : interval === "year" && monthly ? (suggestedAnnualCents(monthly.amountCents, discount) / 100).toFixed(2) : ""} required className={input} /></label>
                     <label className="block text-sm">Présentation<select name="taxBehavior" defaultValue={p?.taxBehavior === "inclusive" ? "inclusive" : "exclusive"} className={input}><option value="exclusive">HT</option><option value="inclusive">TTC</option></select></label>
                     <label className="block text-sm">Identifiant de prix Stripe<input name="stripePriceId" defaultValue={p?.stripePriceId ?? ""} placeholder="price_…" className={input} /></label>
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isDemo" defaultChecked={p?.isDemo ?? true} /> Prix de démonstration</label>
-                    <Button size="sm" variant="secondary">Créer ce prix (remplace l&apos;actuel pour les nouvelles souscriptions)</Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="secondary">Créer ce prix (remplace l&apos;actuel pour les nouvelles souscriptions)</Button>
+                      {interval === "year" && monthly && <Button size="sm" variant="ghost" name="useSuggestion" value="1">Appliquer la suggestion</Button>}
+                    </div>
+                    <p className="text-xs text-muted">Le prix Stripe correspondant doit avoir exactement le même montant.</p>
                   </form>
                 );
               })}

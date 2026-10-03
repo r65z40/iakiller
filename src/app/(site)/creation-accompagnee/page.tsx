@@ -3,12 +3,15 @@ import Link from "next/link";
 import { listActiveOffers } from "@/lib/services/orders";
 import { formatMoney } from "@/lib/format";
 import { Alert } from "@/components/ui";
+import { getSettings } from "@/lib/settings/store";
+import { RichText } from "@/components/card/RichText";
 
 export const metadata: Metadata = { title: "Création accompagnée" };
 export const dynamic = "force-dynamic";
 
 export default async function GuidedCreation() {
-  const offers = await listActiveOffers();
+  const [offers, settings] = await Promise.all([listActiveOffers(), getSettings()]);
+  const svc = settings.service;
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-extrabold">Création accompagnée</h1>
@@ -33,6 +36,19 @@ export default async function GuidedCreation() {
           ))}
         </div>
       )}
+      <section className="mt-8 rounded-xl bg-surface p-5 text-sm">
+        <h2 className="text-lg font-bold">Conditions de la prestation</h2>
+        {svc.published ? (
+          <div className="mt-2 space-y-2">
+            {svc.deliveryDelay && <p><strong>Délai :</strong> {svc.deliveryDelay}</p>}
+            {svc.revisionsPolicy && <p><strong>Corrections :</strong> {svc.revisionsPolicy}</p>}
+            {svc.refundPolicy && <p><strong>Remboursement :</strong> {svc.refundPolicy}</p>}
+            {svc.conditions && <RichText text={svc.conditions} className="space-y-2 text-muted" />}
+          </div>
+        ) : (
+          <p className="mt-2 text-muted">Les délais et conditions détaillées vous sont communiqués avant toute commande.</p>
+        )}
+      </section>
       <Link href="/inscription" className="mt-8 inline-block rounded-lg bg-brand px-5 py-3 font-semibold text-white">Créer mon compte et faire une demande</Link>
     </div>
   );

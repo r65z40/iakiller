@@ -1,3 +1,5 @@
+import { settingsSync } from "@/lib/settings/store";
+
 /**
  * Régime de collecte des statistiques (voir docs/STATISTIQUES.md).
  * - ANALYTICS_MODE=off      : aucune collecte.
@@ -8,11 +10,12 @@
  *   consentement pour la mesure d'audience est conditionnelle).
  */
 export function analyticsConfig() {
-  const mode = process.env.ANALYTICS_MODE === "off" ? "off" : "minimal";
+  // Régime réglé dans l'administration (défaut : variables d'environnement ci-dessus).
+  const s = settingsSync();
   return {
-    enabled: mode !== "off",
-    requireConsent: process.env.ANALYTICS_REQUIRE_CONSENT === "true",
-    rawRetentionDays: Number(process.env.ANALYTICS_RAW_RETENTION_DAYS ?? 395),
+    enabled: s.analytics.mode !== "off",
+    requireConsent: s.analytics.mode === "consent",
+    rawRetentionDays: s.retention.analyticsRawDays,
   };
 }
 

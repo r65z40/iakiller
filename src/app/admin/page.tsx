@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireStaffPage } from "@/lib/context";
 import { platformMetrics } from "@/lib/admin/service";
 import { launchBlockers } from "@/lib/billing/service";
@@ -5,6 +6,7 @@ import { billingMode } from "@/lib/billing/stripe";
 import { emailMode } from "@/lib/email/send";
 import { analyticsConfig } from "@/lib/analytics/config";
 import { formatMoney } from "@/lib/format";
+import { graceDays } from "@/lib/config";
 import { Alert, PageHeader, Panel } from "@/components/ui";
 
 export default async function AdminHome() {
@@ -17,6 +19,7 @@ export default async function AdminHome() {
   return (
     <>
       <PageHeader title="Tableau de bord plateforme" description="Indicateurs calculés en direct depuis la base, sur 30 jours. Aucune donnée de démonstration n'est injectée." />
+      <p className="mb-4 text-sm"><Link href="/admin/reglages" className="font-semibold text-brand underline">Réglages de la plateforme</Link> : marque, domaine, société, tarification, conservation, création accompagnée, validations juridiques.</p>
       {blockers.length > 0 && (
         <div className="mb-6"><Alert tone="warning" title={`Lancement commercial bloqué (${blockers.length} point(s))`}><ul className="mt-1 list-disc pl-5">{blockers.map((b) => <li key={b}>{b}</li>)}</ul></Alert></div>
       )}
@@ -36,7 +39,7 @@ export default async function AdminHome() {
           <div><dt className="font-semibold">Emails</dt><dd>{emailMode() === "log" ? "journalisés, non envoyés" : "SMTP réel"}</dd></div>
           <div><dt className="font-semibold">Stockage</dt><dd>{process.env.STORAGE_DRIVER === "s3" ? "S3 compatible" : "disque local"}</dd></div>
           <div><dt className="font-semibold">Mesure d&apos;audience</dt><dd>{a.enabled ? `active${a.requireConsent ? ", avec consentement préalable" : ", sans traceur"}` : "désactivée"} · conservation brute {a.rawRetentionDays} j</dd></div>
-          <div><dt className="font-semibold">Délai de grâce impayé</dt><dd>{process.env.BILLING_GRACE_DAYS ?? "7"} jour(s)</dd></div>
+          <div><dt className="font-semibold">Délai de grâce impayé</dt><dd>{graceDays()} jour(s)</dd></div>
         </dl>
       </Panel>
     </>

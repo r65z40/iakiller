@@ -11,6 +11,7 @@ const NAV = [
   ["/admin", "Tableau de bord"],
   ["/admin/organisations", "Organisations"],
   ["/admin/utilisateurs", "Utilisateurs"],
+  ["/admin/reglages", "Réglages"],
   ["/admin/plans", "Plans et prestations"],
   ["/admin/prestations", "Commandes de création"],
   ["/admin/support", "Support"],

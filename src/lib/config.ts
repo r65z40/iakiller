@@ -1,30 +1,47 @@
+import { settingsSync } from "@/lib/settings/store";
+
 /**
- * Configuration centralisée. Le nom de marque est provisoire et se change ici
- * (ou via la variable NEXT_PUBLIC_BRAND_NAME) sans toucher au reste du code.
+ * Configuration centralisée. Les valeurs commerciales et légales sont modifiables dans
+ * l'administration (/admin/reglages) et lues ici via le cache des réglages ; à défaut,
+ * les variables d'environnement s'appliquent. Les champs vides affichent un repère
+ * « à compléter » plutôt qu'une valeur inventée.
  */
+const orTodo = (v: string, label: string) => v || `[${label} À COMPLÉTER]`;
+
 export const brand = {
-  name: process.env.NEXT_PUBLIC_BRAND_NAME || "Carto",
-  tagline: "Cartes de visite numériques pour les professionnels",
-  supportEmail: process.env.SUPPORT_EMAIL || "support@example.invalid",
-  /** Informations légales de l'exploitant : à compléter avant la production (voir DECISIONS.md). */
+  get name() {
+    return settingsSync().brand.name;
+  },
+  get tagline() {
+    return settingsSync().brand.tagline;
+  },
+  get supportEmail() {
+    return settingsSync().brand.supportEmail || "support@example.invalid";
+  },
   legal: {
-    companyName: process.env.LEGAL_COMPANY_NAME || "[RAISON SOCIALE À COMPLÉTER]",
-    legalForm: process.env.LEGAL_FORM || "[FORME JURIDIQUE À COMPLÉTER]",
-    capital: process.env.LEGAL_CAPITAL || "[CAPITAL SOCIAL À COMPLÉTER]",
-    address: process.env.LEGAL_ADDRESS || "[ADRESSE DU SIÈGE À COMPLÉTER]",
-    siren: process.env.LEGAL_SIREN || "[SIREN / RCS À COMPLÉTER]",
-    vat: process.env.LEGAL_VAT || "[N° TVA INTRACOMMUNAUTAIRE À COMPLÉTER]",
-    director: process.env.LEGAL_DIRECTOR || "[DIRECTEUR DE LA PUBLICATION À COMPLÉTER]",
-    host: process.env.LEGAL_HOST || "[HÉBERGEUR : NOM, ADRESSE, TÉLÉPHONE À COMPLÉTER]",
-    contactEmail: process.env.LEGAL_CONTACT_EMAIL || "[EMAIL DE CONTACT À COMPLÉTER]",
+    get companyName() { return orTodo(settingsSync().company.companyName, "RAISON SOCIALE"); },
+    get legalForm() { return orTodo(settingsSync().company.legalForm, "FORME JURIDIQUE"); },
+    get capital() { return orTodo(settingsSync().company.capital, "CAPITAL SOCIAL"); },
+    get address() { return orTodo(settingsSync().company.address, "ADRESSE DU SIÈGE"); },
+    get siren() { return orTodo(settingsSync().company.siren, "SIREN / RCS"); },
+    get vat() { return orTodo(settingsSync().company.vat, "N° TVA INTRACOMMUNAUTAIRE"); },
+    get director() { return orTodo(settingsSync().company.director, "DIRECTEUR DE LA PUBLICATION"); },
+    get host() { return orTodo(settingsSync().company.host, "HÉBERGEUR : NOM, ADRESSE, TÉLÉPHONE"); },
+    get contactEmail() { return orTodo(settingsSync().company.contactEmail, "EMAIL DE CONTACT"); },
   },
 };
 
-export function appUrl(): string {
+/** URL technique fixée par l'environnement (authentification, cookies). */
+export function envAppUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-export const TIMEZONE = "Europe/Paris";
+/** URL publique : domaine réglé dans l'administration, sinon APP_URL. */
+export function appUrl(): string {
+  return (settingsSync().brand.publicUrl || envAppUrl()).replace(/\/$/, "");
+}
+
+export { TIMEZONE } from "@/lib/format";
 
 /** Règles d'essai (propositions à valider, voir DECISIONS.md). */
 export const trialRules = {
@@ -34,10 +51,9 @@ export const trialRules = {
   memberQuota: 3,
 };
 
-/** Délai de grâce en cas d'impayé, configurable. Proposition : 7 jours. */
+/** Délai de grâce en cas d'impayé, réglable dans l'administration (défaut : BILLING_GRACE_DAYS ou 7). */
 export function graceDays(): number {
-  const v = Number(process.env.BILLING_GRACE_DAYS ?? "7");
-  return Number.isFinite(v) && v >= 0 ? v : 7;
+  return settingsSync().billing.graceDays;
 }
 
 export const limits = {

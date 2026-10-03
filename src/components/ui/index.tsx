@@ -94,7 +94,7 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
     danger: "bg-[#fdecea] text-danger ring-[#f3b4ad]",
     brand: "bg-brand-soft text-brand ring-brand/20",
   };
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${tones[tone]}`}>{children}</span>;
 }
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {

@@ -8,6 +8,13 @@
       "when": 1790973326689,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790986787665,
+      "tag": "0001_organization_purged_at",
+      "breakpoints": true
     }
   ]
 }

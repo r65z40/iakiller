@@ -1,4 +1,5 @@
-import { TIMEZONE } from "@/lib/config";
+/** Fuseau d'affichage (les données restent en UTC). */
+export const TIMEZONE = "Europe/Paris";
 
 /** Affichages en Europe/Paris ; les données restent en UTC. */
 export function formatDateTime(d: Date | string | null | undefined): string {

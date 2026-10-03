@@ -1,9 +1,11 @@
+import { getSettings } from "@/lib/settings/store";
 import { NextResponse } from "next/server";
 import { asReader, getStripe, webhookSecret } from "@/lib/billing/stripe";
 import { handleStripeWebhook } from "@/lib/billing/webhooks";
 
 /** Point d'entrée des webhooks Stripe (corps brut indispensable à la vérification de signature). */
 export async function POST(req: Request) {
+  await getSettings();
   const stripe = getStripe();
   const secret = webhookSecret();
   if (!stripe || !secret) return NextResponse.json({ error: "Facturation non configurée" }, { status: 503 });

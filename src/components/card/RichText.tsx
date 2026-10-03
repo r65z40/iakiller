@@ -22,12 +22,15 @@ function inline(text: string, keyBase: string): ReactNode[] {
   return out;
 }
 
-export function RichText({ text, className }: { text: string; className?: string }) {
+export function RichText({ text, className, headings = false }: { text: string; className?: string; headings?: boolean }) {
   const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
   return (
     <div className={className}>
       {blocks.map((block, bi) => {
         const lines = block.split("\n");
+        if (headings && lines.length === 1 && /^##\s+/.test(lines[0])) {
+          return <h2 key={bi}>{lines[0].replace(/^##\s+/, "")}</h2>;
+        }
         if (lines.every((l) => /^\s*[-•]\s+/.test(l))) {
           return (
             <ul key={bi} className="list-disc pl-5 space-y-1">

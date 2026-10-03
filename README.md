@@ -71,14 +71,20 @@ Bases de test : `createdb -O cartes cartes_test && createdb -O cartes cartes_e2e
 
 Voir [docs/EXPLOITATION.md](docs/EXPLOITATION.md) : une instance Node.js derrière HTTPS, PostgreSQL géré, bucket S3 privé, SMTP, `npm run jobs` planifié, scripts `scripts/ops/backup.sh` et `scripts/ops/restore.sh` (restauration testée).
 
+## Réglages de la plateforme (administration)
+
+`/admin/reglages` permet de personnaliser sans redéploiement : marque et domaine, informations de la société, délai de grâce, remise annuelle de référence et mention fiscale, durées de conservation (avec purges automatiques), conditions de la création accompagnée, texte définitif et validation juridique de chaque page légale, régime de mesure d'audience et sa validation. Les prix réels se saisissent dans `/admin/plans`. Les variables d'environnement servent de valeurs par défaut ; les secrets restent hors de l'interface.
+
+Changer de domaine : faire pointer le DNS et le certificat vers le serveur, conserver une redirection depuis l'ancien domaine (QR déjà imprimés), redémarrer l'application, puis mettre `APP_URL` à jour au déploiement suivant.
+
 ## Avant la mise en production : paramètres à renseigner
 
-1. **Marque et domaine** : `NEXT_PUBLIC_BRAND_NAME`, `APP_URL` (HTTPS), `SUPPORT_EMAIL`, `EMAIL_FROM`.
-2. **Société** : `LEGAL_COMPANY_NAME`, `LEGAL_FORM`, `LEGAL_CAPITAL`, `LEGAL_ADDRESS`, `LEGAL_SIREN`, `LEGAL_VAT`, `LEGAL_DIRECTOR`, `LEGAL_HOST`, `LEGAL_CONTACT_EMAIL`.
+1. **Marque, domaine et société** : dans `/admin/reglages` (ou, par défaut, `NEXT_PUBLIC_BRAND_NAME`, `APP_URL`, `SUPPORT_EMAIL`, `EMAIL_FROM`, `LEGAL_*`).
+2. **URL technique** : `APP_URL` en HTTPS.
 3. **Secrets** : `BETTER_AUTH_SECRET`, `DATABASE_URL`, `SMTP_URL`, `S3_*`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 4. **Paiement live** : `STRIPE_ALLOW_LIVE=true` (garde-fou volontaire), prix live associés dans `/admin/plans`, marqueurs « démonstration » retirés.
-5. **Règles** : `BILLING_GRACE_DAYS`, `ANALYTICS_MODE`, `ANALYTICS_REQUIRE_CONSENT`, `ANALYTICS_RAW_RETENTION_DAYS`.
-6. **Validation juridique** : conditions, confidentialité, cookies, accord de sous-traitance, régime des statistiques.
+5. **Règles** : délai de grâce, conservation, régime de mesure, dans `/admin/reglages`.
+6. **Validation juridique** : à enregistrer page par page dans `/admin/reglages` après relecture par un professionnel.
 7. **Décisions** listées dans [DECISIONS.md](DECISIONS.md), section 4.
 
 Le tableau de bord `/admin` affiche en permanence les points qui bloquent encore le lancement commercial.

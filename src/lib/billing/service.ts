@@ -3,7 +3,10 @@ import { db, schema } from "@/lib/db";
 import { DomainError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
-import { appUrl, brand } from "@/lib/config";
+import { appUrl } from "@/lib/config";
+import { getSettings } from "@/lib/settings/store";
+import { missingCompanyFields } from "@/lib/settings/schema";
+import { settingsBlockers } from "@/lib/settings/service";
 import type { Actor } from "@/lib/cards/service";
 import { asReader, getStripe } from "./stripe";
 import { syncSubscription } from "./sync";
@@ -55,7 +58,10 @@ export async function launchBlockers(): Promise<string[]> {
   }
   if (!process.env.STRIPE_SECRET_KEY) blockers.push("STRIPE_SECRET_KEY non configurée.");
   if (!process.env.STRIPE_WEBHOOK_SECRET) blockers.push("STRIPE_WEBHOOK_SECRET non configurée.");
-  if (brand.legal.companyName.startsWith("[")) blockers.push("Informations légales de l'exploitant à compléter (LEGAL_*).");
+  const settings = await getSettings();
+  const missing = missingCompanyFields(settings);
+  if (missing.length) blockers.push(`Informations de la société à compléter : ${missing.join(", ")}.`);
+  blockers.push(...settingsBlockers(settings));
   if (process.env.EMAIL_MODE !== "smtp") blockers.push("Envoi d'emails réel non configuré (EMAIL_MODE=smtp).");
   return blockers;
 }

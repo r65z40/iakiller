@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
-import { brand } from "@/lib/config";
-import { LegalPage } from "@/components/site/Legal";
+import { getSettings } from "@/lib/settings/store";
+import { LegalPage, Val } from "@/components/site/Legal";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Mentions légales" };
 
-export default function LegalNotice() {
-  const l = brand.legal;
+export default async function LegalNotice() {
+  const { company: c, brand } = await getSettings();
   return (
-    <LegalPage title="Mentions légales">
+    <LegalPage title="Mentions légales" page="mentions">
       <h2>Éditeur du service</h2>
       <ul>
-        <li>Raison sociale : {l.companyName}</li>
-        <li>Forme juridique et capital : {l.legalForm} – {l.capital}</li>
-        <li>Siège social : {l.address}</li>
-        <li>Immatriculation : {l.siren}</li>
-        <li>TVA intracommunautaire : {l.vat}</li>
-        <li>Directeur ou directrice de la publication : {l.director}</li>
-        <li>Contact : {l.contactEmail}</li>
+        <li>Raison sociale : <Val v={c.companyName} todo="raison sociale à compléter" /></li>
+        <li>Forme juridique et capital : <Val v={c.legalForm} todo="forme juridique" /> – <Val v={c.capital} todo="capital social" /></li>
+        <li>Siège social : <Val v={c.address} todo="adresse du siège" /></li>
+        <li>Immatriculation : <Val v={c.siren} todo="SIREN / RCS" /></li>
+        <li>TVA intracommunautaire : <Val v={c.vat} todo="numéro de TVA" /></li>
+        <li>Directeur ou directrice de la publication : <Val v={c.director} todo="à désigner" /></li>
+        <li>Contact : <Val v={c.contactEmail} todo="email de contact" /></li>
       </ul>
       <h2>Hébergement</h2>
-      <p>{l.host}</p>
+      <p><Val v={c.host} todo="hébergeur : nom, adresse, téléphone" /></p>
       <h2>Contenus des cartes</h2>
-      <p>Les cartes de visite publiées sont rédigées par les clients du service, qui en sont responsables. Pour signaler un contenu illicite, écrivez à {l.contactEmail} en précisant l&apos;adresse de la carte concernée.</p>
+      <p>Les cartes de visite publiées sur {brand.name} sont rédigées par les clients du service, qui en sont responsables. Pour signaler un contenu illicite, écrivez à <Val v={c.contactEmail} todo="email de contact" /> en précisant l&apos;adresse de la carte concernée.</p>
     </LegalPage>
   );
 }

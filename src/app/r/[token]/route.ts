@@ -1,3 +1,4 @@
+import { getSettings } from "@/lib/settings/store";
 import { NextResponse } from "next/server";
 import { resolvePublicToken } from "@/lib/cards/public";
 import { appUrl } from "@/lib/config";
@@ -7,6 +8,7 @@ import { appUrl } from "@/lib/config";
  * permet de renommer la carte sans réimprimer le QR. Contrôle d'accès identique à la page.
  */
 export async function GET(_req: Request, ctx: RouteContext<"/r/[token]">) {
+  await getSettings();
   const { token } = await ctx.params;
   const result = await resolvePublicToken(token);
   const base = appUrl();

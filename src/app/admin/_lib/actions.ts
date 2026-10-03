@@ -8,6 +8,9 @@ import * as admin from "@/lib/admin/service";
 import * as orders from "@/lib/services/orders";
 import * as support from "@/lib/support/service";
 import type { PlatformPermission } from "@/lib/permissions";
+import { listPlans } from "@/lib/billing/service";
+import { suggestedAnnualCents } from "@/lib/billing/pricing";
+import { getSettings } from "@/lib/settings/store";
 
 async function act(path: string, permission: PlatformPermission, fn: (staff: Awaited<ReturnType<typeof requireStaffAction>>) => Promise<string>) {
   let target: string;
@@ -80,10 +83,18 @@ export async function updatePlanAction(fd: FormData) {
 
 export async function setPriceAction(fd: FormData) {
   await act("/admin/plans", "platform.plans.manage", async (st) => {
-    const euros = s(fd, "amount").replace(",", ".");
+    const interval = s(fd, "interval") === "year" ? "year" : "month";
+    let amountCents = Math.round(Number(s(fd, "amount").replace(",", ".")) * 100);
+    if (interval === "year" && fd.get("useSuggestion") === "1") {
+      // Prix annuel calculé côté serveur : mensuel actif × 12, moins la remise de référence.
+      const plans = await listPlans({ activeOnly: false });
+      const monthly = plans.find((p) => p.plan.id === s(fd, "planId"))?.monthly;
+      if (!monthly) throw new DomainError("invalid", "Définissez d'abord le prix mensuel.");
+      amountCents = suggestedAnnualCents(monthly.amountCents, (await getSettings(true)).billing.annualDiscountPercent);
+    }
     await admin.setPlanPrice(st, s(fd, "planId"), {
-      interval: s(fd, "interval") === "year" ? "year" : "month",
-      amountCents: Math.round(Number(euros) * 100),
+      interval,
+      amountCents,
       taxBehavior: s(fd, "taxBehavior") === "inclusive" ? "inclusive" : "exclusive",
       stripePriceId: s(fd, "stripePriceId").trim() || null,
       isDemo: fd.get("isDemo") === "on",

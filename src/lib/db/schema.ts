@@ -138,6 +138,8 @@ export const organization = pgTable("organization", {
   allowIndexing: boolean("allow_indexing").notNull().default(false),
   createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
   deletedAt: ts("deleted_at"),
+  /** Contenus effacés par la politique de conservation (les références comptables restent). */
+  purgedAt: ts("purged_at"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

@@ -61,6 +61,20 @@ Ce document sépare les **décisions confirmées** par le cahier des charges des
 
 ## 4. Décisions à prendre avant le lancement commercial
 
+Toutes ces décisions se saisissent dans **`/admin/reglages`** (administrateur avec double authentification), sans redéploiement. Chaque modification est journalisée. Tant qu'un point manque, il apparaît dans la liste « avant le lancement » de l'administration.
+
+| Décision | Où la saisir |
+|---|---|
+| Nom de marque, accroche, domaine public, emails | Réglages > Marque et domaine |
+| Informations de la société | Réglages > Société |
+| Délai de grâce, remise annuelle de référence, mention fiscale | Réglages > Tarification et impayés |
+| Prix réels par plan | Plans et prestations (suggestion du prix annuel à partir de la remise) |
+| Durées de conservation (purges automatiques) | Réglages > Conservation des données |
+| Conditions de la création accompagnée | Réglages > Création accompagnée (et prix, corrections par prestation dans Plans et prestations) |
+| Validation juridique de chaque page légale (texte définitif facultatif) | Réglages > pages légales |
+| Régime de mesure d'audience et sa validation | Réglages > Mesure d'audience |
+
+
 1. **Marque et domaine** : nom définitif (`NEXT_PUBLIC_BRAND_NAME`), domaine et adresses email.
 2. **Informations de la société** : raison sociale, forme, capital, siège, SIREN/RCS, TVA, directeur ou directrice de la publication, hébergeur.
 3. **Prix et quotas** réels par plan, remise annuelle, présentation HT ou TTC, régime de TVA (validation par l'expert-comptable).

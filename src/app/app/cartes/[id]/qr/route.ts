@@ -1,9 +1,11 @@
+import { getSettings } from "@/lib/settings/store";
 import { getOrgContext } from "@/lib/context";
 import { getCardForActor } from "@/lib/cards/service";
 import { qrPng, qrSvg, qrTargetUrl } from "@/lib/cards/qr";
 
 /** Export du QR code d'une carte, réservé aux membres autorisés. */
 export async function GET(req: Request, ctx: RouteContext<"/app/cartes/[id]/qr">) {
+  await getSettings();
   const { id } = await ctx.params;
   const org = await getOrgContext();
   if (!org) return new Response("Non autorisé", { status: 401 });

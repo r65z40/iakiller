@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { newId } from "@/lib/ids";
 import { brand } from "@/lib/config";
+import { settingsSync } from "@/lib/settings/store";
 import type { RenderedEmail } from "./templates";
 
 /**
@@ -57,7 +58,7 @@ export async function deliver(id: string) {
   }
   try {
     await getTransporter().sendMail({
-      from: process.env.EMAIL_FROM || `${brand.name} <no-reply@example.invalid>`,
+      from: settingsSync().brand.emailFrom || process.env.EMAIL_FROM || `${brand.name} <no-reply@example.invalid>`,
       to: row.to,
       subject: row.subject,
       text: row.text,

@@ -1,5 +1,9 @@
 import { and, eq, gt, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { getSettings } from "@/lib/settings/store";
+import { audit } from "@/lib/audit";
+import { loadEntitlement } from "@/lib/billing/load";
+import { storage } from "@/lib/media/storage";
 import { newId } from "@/lib/ids";
 import { appUrl } from "@/lib/config";
 import { formatDateTime } from "@/lib/format";
@@ -118,9 +122,83 @@ export async function cleanup(now = new Date()) {
   return { invitations: inv.length, verifications: ver.length, sessions: ses.length, grants: grants.length };
 }
 
-export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, cleanup } as const;
+/**
+ * Politique de conservation réglée dans l'administration. Chaque règle ne s'applique que
+ * si une durée est renseignée (vide = aucune suppression automatique).
+ * - prospects et journal d'audit au-delà de leur durée : supprimés ;
+ * - organisations sans droit actif (essai terminé ou abonnement terminé) depuis N jours :
+ *   suppression logique (cartes indisponibles) — les impayés et suspensions administratives
+ *   ne sont pas concernés ;
+ * - organisations supprimées depuis N jours : contenus effacés (cartes, médias et fichiers,
+ *   prospects, statistiques, membres) ; les références comptables (factures, abonnements,
+ *   commandes de prestation) sont conservées.
+ */
+export async function applyRetention(now = new Date()) {
+  const r = (await getSettings(true)).retention;
+  const before = (days: number) => new Date(now.getTime() - days * 86400_000);
+  const result = { leads: 0, audit: 0, orgsDeleted: 0, orgsPurged: 0 };
+
+  if (r.leadsDays !== null) {
+    result.leads = (await db.delete(schema.lead).where(lt(schema.lead.createdAt, before(r.leadsDays))).returning({ id: schema.lead.id })).length;
+  }
+  if (r.auditDays !== null) {
+    result.audit = (await db.delete(schema.auditLog).where(lt(schema.auditLog.createdAt, before(r.auditDays))).returning({ id: schema.auditLog.id })).length;
+  }
+
+  if (r.contentAfterEndDays !== null) {
+    const limit = before(r.contentAfterEndDays);
+    const candidates = await db
+      .select()
+      .from(schema.organization)
+      .where(and(isNull(schema.organization.deletedAt), isNull(schema.organization.adminSuspendedAt), lt(schema.organization.trialEndsAt, limit)))
+      .limit(200);
+    for (const org of candidates) {
+      const ent = await loadEntitlement(org.id, db, now);
+      if (ent.state !== "trial_expired" && ent.state !== "ended") continue;
+      const subs = await db.select().from(schema.subscription).where(eq(schema.subscription.organizationId, org.id));
+      const lastEnd = Math.max(
+        org.trialEndsAt?.getTime() ?? 0,
+        ...subs.map((x) => (x.endedAt ?? x.cancelAt ?? x.currentPeriodEnd)?.getTime() ?? 0),
+      );
+      if (lastEnd > limit.getTime()) continue;
+      await db.update(schema.organization).set({ deletedAt: now, updatedAt: now }).where(eq(schema.organization.id, org.id));
+      await audit({ organizationId: org.id, actorType: "system", action: "retention.org_deleted", metadata: { rule: "contentAfterEndDays", days: r.contentAfterEndDays } });
+      result.orgsDeleted++;
+    }
+  }
+
+  if (r.deletedOrgPurgeDays !== null) {
+    const orgs = await db
+      .select()
+      .from(schema.organization)
+      .where(and(isNotNull(schema.organization.deletedAt), isNull(schema.organization.purgedAt), lt(schema.organization.deletedAt, before(r.deletedOrgPurgeDays))))
+      .limit(50);
+    for (const org of orgs) {
+      const media = await db.select({ key: schema.mediaAsset.storageKey }).from(schema.mediaAsset).where(eq(schema.mediaAsset.organizationId, org.id));
+      for (const m of media) await storage().delete(m.key).catch(() => undefined);
+      await db.transaction(async (tx) => {
+        await tx.update(schema.serviceOrder).set({ cardId: null }).where(eq(schema.serviceOrder.organizationId, org.id));
+        await tx.delete(schema.card).where(eq(schema.card.organizationId, org.id)); // versions, statistiques, attributions en cascade
+        await tx.delete(schema.mediaAsset).where(eq(schema.mediaAsset.organizationId, org.id));
+        await tx.delete(schema.lead).where(eq(schema.lead.organizationId, org.id));
+        await tx.delete(schema.analyticsDaily).where(eq(schema.analyticsDaily.organizationId, org.id));
+        await tx.delete(schema.invitation).where(eq(schema.invitation.organizationId, org.id));
+        await tx.delete(schema.membership).where(eq(schema.membership.organizationId, org.id));
+        await tx.delete(schema.brandSettings).where(eq(schema.brandSettings.organizationId, org.id));
+        await tx.delete(schema.serviceOrderMessage).where(eq(schema.serviceOrderMessage.organizationId, org.id));
+        await tx.update(schema.organization).set({ purgedAt: now, updatedAt: now }).where(eq(schema.organization.id, org.id));
+      });
+      await audit({ organizationId: org.id, actorType: "system", action: "retention.org_purged", metadata: { files: media.length } });
+      result.orgsPurged++;
+    }
+  }
+  return result;
+}
+
+export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, applyRetention, cleanup } as const;
 
 export async function runAllJobs(now = new Date()) {
+  await getSettings(true);
   const results: Record<string, unknown> = {};
   for (const [name, fn] of Object.entries(JOBS)) {
     const id = newId();

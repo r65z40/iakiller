@@ -1,3 +1,4 @@
+import { getSettings } from "@/lib/settings/store";
 import { headers as nextHeaders } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
@@ -8,6 +9,7 @@ import { isSameOrigin } from "@/lib/security/origin";
 
 /** Réception des mesures (beacon). Réponse 204 systématique : rien n'est révélé au client. */
 export async function POST(req: Request) {
+  await getSettings();
   if (!isSameOrigin(req)) return new Response(null, { status: 204 });
   const text = await req.text();
   if (text.length > 2000) return new Response(null, { status: 204 });

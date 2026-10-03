@@ -10,6 +10,10 @@
 | D | Membres et invitations, rôles, prospects, statistiques et export | ✅ livré |
 | E | Administration, support, accès d'assistance, site commercial, pages légales à compléter, tâches planifiées, sauvegarde et restauration, E2E | ✅ livré |
 
+## Réglages de la plateforme (ajout)
+
+`/admin/reglages` : marque et domaine, société, tarification (délai de grâce, remise annuelle de référence, mention fiscale), conservation (purges automatiques), conditions de la création accompagnée, texte définitif et validation juridique des cinq pages légales, régime de mesure d'audience et sa validation. Réglages stockés dans `platform_setting`, validés par Zod, journalisés, avec les variables d'environnement comme valeurs par défaut. Tests : `tests/integration/settings.test.ts`.
+
 ## Couverture des critères de validation
 
 | # | Critère | Preuve |

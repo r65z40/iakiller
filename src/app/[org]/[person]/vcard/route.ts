@@ -1,3 +1,4 @@
+import { getSettings } from "@/lib/settings/store";
 import { resolvePublicCard } from "@/lib/cards/public";
 import { buildVCard, vcardFilename } from "@/lib/cards/vcard";
 import { storage } from "@/lib/media/storage";
@@ -8,6 +9,7 @@ import sharp from "sharp";
 
 /** vCard de la version publiée, avec les mêmes contrôles d'accès que la page. */
 export async function GET(_req: Request, ctx: RouteContext<"/[org]/[person]/vcard">) {
+  await getSettings();
   const { org, person } = await ctx.params;
   const result = await resolvePublicCard(org, person);
   if (result.kind === "redirect") return Response.redirect(`${appUrl()}${result.path}/vcard`, 302);
