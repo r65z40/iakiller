@@ -259,7 +259,10 @@ export async function executeBackup(id: string, opts: RunOptions): Promise<Row> 
           if (!a.deletedAt) missing.push(a.storageKey);
           return;
         }
-        const objectKey = `media/${a.storageKey}${key ? ".enc" : ""}`;
+        // L'empreinte de clé est incluse dans le chemin quand la sauvegarde est chiffrée :
+        // une rotation de clé n'écrase plus les fichiers d'anciennes sauvegardes (qui
+        // resteraient indéchiffrables sous l'ancienne clé).
+        const objectKey = key ? `media/${fingerprint}/${a.storageKey}.enc` : `media/${a.storageKey}`;
         const stored = key ? encrypt(body, key) : body;
         await store.put(objectKey, stored, "application/octet-stream");
         written.push(objectKey);

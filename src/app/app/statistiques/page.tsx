@@ -47,7 +47,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/app/statis
     rows.length === 0 ? <p className="text-sm text-muted">Aucune donnée.</p> : (
       <ul className="space-y-1.5 text-sm">
         {rows.map((r) => (
-          <li key={r.key} className="flex justify-between gap-3"><span>{labels?.[r.key] ?? r.key}</span><span className="font-semibold tabular-nums">{r.count}</span></li>
+          <li key={r.key} className="flex justify-between gap-3"><span>{labels && Object.hasOwn(labels, r.key) ? labels[r.key] : r.key}</span><span className="font-semibold tabular-nums">{r.count}</span></li>
         ))}
       </ul>
     );

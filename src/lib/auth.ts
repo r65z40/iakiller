@@ -32,7 +32,12 @@ export const auth = betterAuth({
   }),
   advanced: {
     database: { generateId: () => newId() },
-    useSecureCookies: appUrl().startsWith("https://"),
+    // Décidé à partir de l'URL technique (APP_URL), jamais du domaine réglé en base : un
+    // réglage en http:// ne doit pas faire émettre de cookies de session sans Secure.
+    useSecureCookies: process.env.NODE_ENV === "production" || envAppUrl().startsWith("https://"),
+    // Derrière le proxy maîtrisé (Caddy/nginx sur la même machine), la limitation de débit
+    // de Better Auth peut résoudre l'IP cliente au lieu d'un seau partagé unique.
+    ipAddress: { trustedProxies: ["127.0.0.1", "::1"] },
   },
   user: {
     additionalFields: {

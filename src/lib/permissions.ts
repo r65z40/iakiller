@@ -69,7 +69,9 @@ export function canAssignRole(actor: MemberContext, targetRole: OrgRole, current
   if (actor.role === "owner") return targetRole !== "owner"; // le transfert de propriété est une action dédiée
   if (actor.role === "manager") {
     if (targetRole === "owner") return false;
-    if (currentTargetRole === "owner") return false;
+    // Un gestionnaire ne gère que les collaborateurs : il ne peut ni viser ni créer un autre gestionnaire.
+    if (currentTargetRole === "owner" || currentTargetRole === "manager") return false;
+    if (targetRole === "manager") return false;
     return true;
   }
   return false;

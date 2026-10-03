@@ -100,7 +100,12 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     .from(schema.membership)
     .innerJoin(schema.user, eq(schema.user.id, schema.membership.userId))
     .where(and(eq(schema.membership.organizationId, card.organizationId), inArray(schema.membership.role, ["owner", "manager"])));
-  const recipients = [...new Set([...assignees, ...managers].map((r) => r.email))].slice(0, 20);
+  // Limite les notifications par carte (anti-inondation des boîtes mail d'une organisation) :
+  // le prospect est toujours enregistré, mais au-delà on n'envoie plus d'email.
+  const recipients =
+    rateLimit(`leadnotif:${card.id}`, 10, 3600_000, now.getTime())
+      ? [...new Set([...assignees, ...managers].map((r) => r.email))].slice(0, 20)
+      : [];
   for (const to of recipients) {
     await sendEmail({ to, template: "leadReceived", email: templates.leadReceived({ cardTitle: card.title, url: `${appUrl()}/app/prospects` }) });
   }

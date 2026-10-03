@@ -2,7 +2,7 @@ import { cache } from "react";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { loadEntitlement } from "@/lib/billing/load";
-import { parseDocument, type CardDocument } from "./document";
+import { collectMediaIds, parseDocument, publicDocument, type CardDocument } from "./document";
 import { applyBrandLocks } from "@/lib/brand";
 import { getBrand } from "@/lib/brand-service";
 
@@ -39,7 +39,8 @@ async function loadAccessible(org: typeof schema.organization.$inferSelect, card
   if (!parsed.success) return { kind: "unavailable" };
   // Les verrous de marque s'appliquent aussi au rendu : un changement de charte par le
   // propriétaire est visible immédiatement sur toutes les cartes publiées.
-  const document = applyBrandLocks(parsed.data, brand);
+  // Projection publique : les blocs masqués et la photo/logo masqués ne quittent jamais le serveur.
+  const document = publicDocument(applyBrandLocks(parsed.data, brand));
   return { kind: "ok", organization: org, card, document, versionId: version.id };
 }
 
@@ -97,7 +98,7 @@ export async function isMediaPubliclyServable(mediaId: string): Promise<{ ok: bo
   const [media] = await db.select().from(schema.mediaAsset).where(and(eq(schema.mediaAsset.id, mediaId), isNull(schema.mediaAsset.deletedAt)));
   if (!media) return { ok: false };
   const candidates = await db
-    .select({ card: schema.card })
+    .select({ card: schema.card, document: schema.cardVersion.document })
     .from(schema.card)
     .innerJoin(schema.cardVersion, eq(schema.cardVersion.id, schema.card.publishedVersionId))
     .where(
@@ -109,9 +110,14 @@ export async function isMediaPubliclyServable(mediaId: string): Promise<{ ok: bo
         isNull(schema.card.adminSuspendedAt),
         sql`${schema.cardVersion.mediaIds} @> ${JSON.stringify([mediaId])}::jsonb`,
       ),
-    )
-    .limit(1);
-  if (candidates.length === 0) {
+    );
+  // Le média doit être référencé par la projection PUBLIQUE (un média de bloc masqué ou une
+  // photo/logo masqués ne sont pas servis, même s'ils figurent dans mediaIds).
+  const referencedPublicly = candidates.some((c) => {
+    const parsed = parseDocument(c.document);
+    return parsed.success && collectMediaIds(publicDocument(parsed.data)).includes(mediaId);
+  });
+  if (!referencedPublicly) {
     // Logo de marque verrouillé : servi s'il existe au moins une carte accessible de l'organisation.
     const brand = await getBrand(media.organizationId);
     if (!(brand?.logoMediaId === mediaId && brand.lockedFields.includes("logo"))) return { ok: false };

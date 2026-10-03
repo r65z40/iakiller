@@ -88,7 +88,7 @@ export interface ImportRow {
 export function mapRows(rows: string[][]): { rows: ImportRow[]; unknownColumns: string[]; error?: string } {
   if (rows.length < 2) return { rows: [], unknownColumns: [], error: "Le fichier doit contenir une ligne d'en-tête et au moins une ligne de données." };
   const header = rows[0].map(norm);
-  const mapping = header.map((h) => ALIASES[h] ?? null);
+  const mapping = header.map((h) => (Object.hasOwn(ALIASES, h) ? ALIASES[h] : null));
   const unknownColumns = rows[0].filter((_, i) => !mapping[i]);
   if (!mapping.includes("prenom") && !mapping.includes("nom")) return { rows: [], unknownColumns, error: "Colonnes « prenom » et « nom » introuvables dans l'en-tête." };
   if (rows.length - 1 > IMPORT_MAX_ROWS) return { rows: [], unknownColumns, error: `${IMPORT_MAX_ROWS} lignes maximum par import.` };

@@ -188,7 +188,7 @@ describe("rétrogradation", () => {
     const { actor, org } = await createOrgWithOwner();
     await createCard(actor, { title: "Un" });
     await createCard(actor, { title: "Deux" });
-    await expect(changePlan(actor, "pp_solo", Math.floor(Date.now() / 1000))).rejects.toMatchObject({ code: "quota_exceeded" });
+    await expect(changePlan(actor, "pp_solo")).rejects.toMatchObject({ code: "quota_exceeded" });
     const cards = await db.select().from(schema.card).where(eq(schema.card.organizationId, org.id));
     expect(cards).toHaveLength(2);
     expect(cards.every((c) => c.status === "draft")).toBe(true);

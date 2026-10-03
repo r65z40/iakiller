@@ -22,7 +22,7 @@ export interface BrandValues {
 }
 
 export function isLockable(v: string): v is LockableField {
-  return v in LOCKABLE_FIELDS;
+  return Object.hasOwn(LOCKABLE_FIELDS, v);
 }
 
 /**

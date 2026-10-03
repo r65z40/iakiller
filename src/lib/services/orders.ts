@@ -239,14 +239,30 @@ export async function staffCreateDraftForOrder(staff: Staff, orderId: string) {
   if (!order.paidAt) throw new DomainError("invalid", "La commande n'est pas payée.");
   if (order.cardId) return { cardId: order.cardId };
   const grantId = newId();
+  const expiresAt = new Date(Date.now() + 7 * 86400_000);
   await db.insert(schema.supportAccessGrant).values({
     id: grantId,
     organizationId: order.organizationId,
     staffUserId: staff.id,
     reason: `Création accompagnée (commande ${order.id})`,
     serviceOrderId: order.id,
-    expiresAt: new Date(Date.now() + 30 * 86400_000),
+    // Durée limitée (7 jours, renouvelable par phase) et propriétaire notifié, comme pour
+    // tout accès d'assistance : pas d'accès silencieux de 30 jours.
+    expiresAt,
   });
+  const [org] = await db.select({ name: schema.organization.name }).from(schema.organization).where(eq(schema.organization.id, order.organizationId));
+  for (const o of await db
+    .select({ email: schema.user.email })
+    .from(schema.membership)
+    .innerJoin(schema.user, eq(schema.user.id, schema.membership.userId))
+    .where(and(eq(schema.membership.organizationId, order.organizationId), eq(schema.membership.role, "owner")))) {
+    await sendEmail({
+      to: o.email,
+      template: "supportAccessGranted",
+      email: templates.supportAccessGranted({ orgName: org?.name ?? "", staff: "L'équipe de création", reason: `Création accompagnée (commande ${order.id})`, until: expiresAt.toISOString().slice(0, 10), url: `${appUrl()}/app/assistance` }),
+      dedupeKey: `order-grant:${grantId}`,
+    });
+  }
   const actor: Actor = { user: { id: staff.id }, organization: { id: order.organizationId }, role: "manager", canManageBilling: false, supportGrantId: grantId };
   const brief = order.brief as Record<string, string>;
   const card = await createCard(actor, { title: `Création accompagnée – ${(brief.people || "carte").slice(0, 40)}` });

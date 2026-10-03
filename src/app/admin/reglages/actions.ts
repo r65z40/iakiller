@@ -82,7 +82,7 @@ export async function saveServiceAction(fd: FormData) {
 export async function saveLegalAction(fd: FormData) {
   const page = s(fd, "page") as LegalPageKey;
   await save(`legal-${page}`, async (_fd, current) => {
-    if (!(page in LEGAL_PAGES)) throw new DomainError("invalid", "Page inconnue.");
+    if (!Object.hasOwn(LEGAL_PAGES, page)) throw new DomainError("invalid", "Page inconnue.");
     const legal = { ...current.legal, [page]: { customText: s(fd, "customText"), ...validation(fd, "", current.legal[page]) } };
     await updateSettingsSection(await staff(), "legal", legal);
   }, fd);

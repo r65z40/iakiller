@@ -2,7 +2,7 @@
 
 SaaS de cartes de visite numériques pour artisans, indépendants, commerciaux, TPE et PME : éditeur par blocs, page publique mobile `/{entreprise}/{personne}`, QR code stable, vCard, formulaire de prospects, statistiques expliquées, équipes, abonnements Stripe, création accompagnée, administration.
 
-**Guides** : [Installation](docs/INSTALLATION.md) · [Fonctionnalités](docs/FONCTIONNALITES.md) · [Sauvegardes](docs/SAUVEGARDE.md)
+**Guides** : [Installation](docs/INSTALLATION.md) · [Fonctionnalités](docs/FONCTIONNALITES.md) · [Sauvegardes](docs/SAUVEGARDE.md) · [Audit de sécurité](docs/AUDIT-SECURITE.md)
 
 Documents : [PRODUCT_SPEC](PRODUCT_SPEC.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md) · [Permissions](docs/PERMISSIONS.md) · [États d'abonnement](docs/ETATS-ABONNEMENT.md) · [Statistiques](docs/STATISTIQUES.md) · [Stripe](docs/STRIPE.md) · [Exploitation](docs/EXPLOITATION.md)
 

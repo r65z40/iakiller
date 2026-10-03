@@ -75,7 +75,7 @@ export function PlanPicker({ plans, currentPriceId, hasLive, canManage, billingE
           {preview.blocked && <div className="mt-2"><Alert tone="warning">{preview.blocked}</Alert></div>}
           <div className="mt-3 flex gap-2">
             <Button type="button" disabled={pending || !!preview.blocked} onClick={() => start(async () => {
-              const r = await changePlanAction(preview.priceId, preview.prorationDate);
+              const r = await changePlanAction(preview.priceId);
               if (r.ok) { setDone(r.data); setPreview(null); } else setError(r.error);
             })}>Confirmer le changement</Button>
             <Button type="button" variant="secondary" onClick={() => setPreview(null)}>Annuler</Button>
