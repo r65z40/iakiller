@@ -12,10 +12,12 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts",
-    "jobs": "tsx scripts/jobs.ts",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
+    "jobs": "tsx --env-file-if-exists=.env scripts/jobs.ts",
+    "admin:create": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
+    "backup": "tsx --env-file-if-exists=.env scripts/backup.ts",
+    "doctor": "tsx --env-file-if-exists=.env scripts/doctor.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",
@@ -37,7 +39,6 @@
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "sanitize-html": "^2.18.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.5",
     "stripe": "^23.0.0",
@@ -53,7 +54,6 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@types/sanitize-html": "^2.16.2",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.8",

@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { CONTACT_KINDS, CURRENT_SCHEMA_VERSION, FONTS, LINK_ICONS, SOCIAL_NETWORKS, TEMPLATES, type FontId } from "./constants";
+
+// Constantes sans dépendance (utilisables côté navigateur sans embarquer Zod).
+export { CONTACT_KINDS, CURRENT_SCHEMA_VERSION, FONTS, LINK_ICONS, SOCIAL_NETWORKS, TEMPLATES };
+export type { ContactKind, FontId, TemplateId } from "./constants";
 import { isHexColor, normalizePhone, normalizeWebUrl, isValidEmail } from "@/lib/validation/urls";
 
 /**
@@ -7,19 +12,6 @@ import { isHexColor, normalizePhone, normalizeWebUrl, isValidEmail } from "@/lib
  * Toute évolution du format doit incrémenter CURRENT_SCHEMA_VERSION et fournir une
  * migration dans migrateDocument().
  */
-export const CURRENT_SCHEMA_VERSION = 1;
-
-export const TEMPLATES = ["classique", "portrait", "entreprise"] as const;
-export type TemplateId = (typeof TEMPLATES)[number];
-
-export const FONTS = {
-  inter: { label: "Inter (sans empattement)", css: "'Inter Variable', system-ui, sans-serif" },
-  source: { label: "Source Serif (avec empattement)", css: "'Source Serif 4 Variable', Georgia, serif" },
-  manrope: { label: "Manrope (arrondie)", css: "'Manrope Variable', system-ui, sans-serif" },
-  system: { label: "Police du système", css: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
-} as const;
-export type FontId = keyof typeof FONTS;
-
 const id = z.string().regex(/^[A-Za-z0-9_-]{4,40}$/);
 const mediaId = id.nullable();
 const short = (max = 80) => z.string().trim().max(max);
@@ -82,8 +74,6 @@ export const bannerSchema = z.object({
 });
 export type CardBanner = z.infer<typeof bannerSchema>;
 
-export const CONTACT_KINDS = ["mobile", "landline", "email", "whatsapp", "sms", "address", "website"] as const;
-export type ContactKind = (typeof CONTACT_KINDS)[number];
 
 const contactItem = z
   .object({ id, kind: z.enum(CONTACT_KINDS), label: short(80), value: short(300) })
@@ -100,8 +90,6 @@ const contactItem = z
     if (!ok) ctx.addIssue({ code: "custom", path: ["value"], message: "Valeur invalide pour ce type de contact" });
   });
 
-export const SOCIAL_NETWORKS = ["linkedin", "instagram", "facebook", "x", "youtube", "tiktok", "other"] as const;
-export const LINK_ICONS = ["web", "linkedin", "instagram", "facebook", "calendar", "document", "shop", "star", "link"] as const;
 
 const fieldMode = z.enum(["off", "optional", "required"]);
 

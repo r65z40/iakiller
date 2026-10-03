@@ -1,0 +1,17 @@
+# Proxy HTTPS (certificat Let's Encrypt automatique). Remplacez le domaine.
+# sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+cartes.exemple.fr {
+	encode zstd gzip
+	# Fichiers statiques versionnés : cache long.
+	@static path /_next/static/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+	request_body {
+		max_size 20MB
+	}
+	reverse_proxy 127.0.0.1:3000
+}
+
+# Ancien domaine éventuel (QR codes déjà imprimés) : redirection permanente.
+# ancien-domaine.fr {
+# 	redir https://cartes.exemple.fr{uri} permanent
+# }

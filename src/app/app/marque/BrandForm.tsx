@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { LOCKABLE_FIELDS, type LockableField } from "@/lib/brand";
-import { FONTS } from "@/lib/cards/document";
+import { FONTS } from "@/lib/cards/constants";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { MediaPicker, type LibraryItem } from "@/components/editor/MediaPicker";
 import { updateBrandAction } from "../_actions/brand";

@@ -64,6 +64,3 @@ export const limits = {
   maxCardsPerPage: 50,
 };
 
-export function isProduction(): boolean {
-  return process.env.NODE_ENV === "production";
-}

@@ -10,7 +10,6 @@ import { settingsBlockers } from "@/lib/settings/service";
 import type { Actor } from "@/lib/cards/service";
 import { asReader, getStripe } from "./stripe";
 import { syncSubscription } from "./sync";
-import { loadEntitlement } from "./load";
 
 export interface PlanWithPrices {
   plan: typeof schema.plan.$inferSelect;
@@ -33,8 +32,6 @@ export async function listPlans(opts: { activeOnly?: boolean } = {}): Promise<Pl
     yearly: prices.find((p) => p.planId === plan.id && p.interval === "year") ?? null,
   }));
 }
-
-export { annualSaving } from "./pricing";
 
 /** Points bloquant le lancement commercial (affichés dans l'administration). */
 export async function launchBlockers(): Promise<string[]> {
@@ -245,5 +242,3 @@ export async function setCancelAtPeriodEnd(actor: Actor, cancel: boolean) {
 export async function listInvoices(organizationId: string) {
   return db.select().from(schema.invoiceReference).where(eq(schema.invoiceReference.organizationId, organizationId)).orderBy(desc(schema.invoiceReference.issuedAt)).limit(50);
 }
-
-export { loadEntitlement };

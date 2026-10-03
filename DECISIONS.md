@@ -58,6 +58,7 @@ Ce document sépare les **décisions confirmées** par le cahier des charges des
 | P21 | Formulaire prospect : au moins un email ou un téléphone ; limite de 5 envois par connexion toutes les 10 minutes et de 100 par carte et par jour ; déduplication sur 24 h. | — | `leads/service.ts` |
 | P22 | Médias : images ré-encodées en WebP de 1 600 px maximum et 8 Mo en entrée, PDF de 15 Mo maximum ; SVG refusé. | — | `config.ts` |
 | P23 | Cache navigateur des médias publics : 5 minutes, sans cache partagé (CDN). La désactivation prend donc effet au plus tard 5 minutes après pour un navigateur ayant déjà chargé le fichier. | 300 s | `media/respond.ts` |
+| P24 | Sauvegardes : quotidiennes, conservation 7 jours / 4 semaines / 6 mois, chiffrement AES-256-GCM, fichiers incrémentaux, essai de restauration hebdomadaire si une base de test est fournie. La destination recommandée est un bucket S3 dédié chez un autre fournisseur. | 24 h ; 7/4/6 | `/admin/sauvegardes`, `BACKUP_*` |
 
 ## 4. Décisions à prendre avant le lancement commercial
 
@@ -73,6 +74,7 @@ Toutes ces décisions se saisissent dans **`/admin/reglages`** (administrateur a
 | Conditions de la création accompagnée | Réglages > Création accompagnée (et prix, corrections par prestation dans Plans et prestations) |
 | Validation juridique de chaque page légale (texte définitif facultatif) | Réglages > pages légales |
 | Régime de mesure d'audience et sa validation | Réglages > Mesure d'audience |
+| Destination, clé et politique de sauvegarde | `.env` (`BACKUP_*`) et `/admin/sauvegardes` |
 
 
 1. **Marque et domaine** : nom définitif (`NEXT_PUBLIC_BRAND_NAME`), domaine et adresses email.

@@ -142,7 +142,7 @@ export const organization = pgTable("organization", {
   purgedAt: ts("purged_at"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-});
+}, (t) => [index("organization_created_by_idx").on(t.createdById)]);
 
 export const membership = pgTable(
   "membership",
@@ -295,7 +295,11 @@ export const cardVersion = pgTable(
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("card_version_card_number_uq").on(t.cardId, t.number)],
+  (t) => [
+    uniqueIndex("card_version_card_number_uq").on(t.cardId, t.number),
+    // Contrôle d'accès des médias publics (media_ids @> '["id"]').
+    index("card_version_media_ids_gin").using("gin", t.mediaIds.op("jsonb_path_ops")),
+  ],
 );
 
 /**
@@ -609,6 +613,7 @@ export const lead = pgTable(
   (t) => [
     index("lead_org_time_idx").on(t.organizationId, t.createdAt),
     index("lead_dedupe_idx").on(t.dedupeHash, t.createdAt),
+    index("lead_card_time_idx").on(t.cardId, t.createdAt),
   ],
 );
 
@@ -722,3 +727,43 @@ export const jobRun = pgTable("job_run", {
   status: text("status").notNull(),
   detail: jsonb("detail").$type<Record<string, unknown>>().notNull().default({}),
 });
+
+/**
+ * Sauvegardes (base de données + fichiers). Le contenu est dans la destination de
+ * sauvegarde (jamais dans cette base) ; ce journal sert au suivi, à la rétention et
+ * aux alertes. Une seule sauvegarde « running » à la fois (index unique partiel).
+ */
+export const backupRun = pgTable(
+  "backup_run",
+  {
+    id: text("id").primaryKey(),
+    /** running | ok | failed | deleted */
+    status: text("status").notNull(),
+    /** scheduled | manual | cli */
+    trigger: text("trigger").notNull(),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    startedAt: ts("started_at").notNull().defaultNow(),
+    finishedAt: ts("finished_at"),
+    manifestKey: text("manifest_key"),
+    encrypted: boolean("encrypted").notNull().default(false),
+    dbBytes: bigint("db_bytes", { mode: "number" }).notNull().default(0),
+    /** Octets réellement écrits par cette sauvegarde (les fichiers déjà sauvegardés sont réutilisés). */
+    writtenBytes: bigint("written_bytes", { mode: "number" }).notNull().default(0),
+    mediaCount: integer("media_count").notNull().default(0),
+    mediaCopied: integer("media_copied").notNull().default(0),
+    missingFiles: integer("missing_files").notNull().default(0),
+    error: text("error"),
+    /** Dernière vérification d'intégrité (relecture, déchiffrement, empreintes). */
+    verifiedAt: ts("verified_at"),
+    verifyStatus: text("verify_status"),
+    verifyDetail: text("verify_detail"),
+    /** Dernier essai de restauration complète dans une base de test. */
+    restoreTestedAt: ts("restore_tested_at"),
+    restoreTestStatus: text("restore_test_status"),
+    deletedAt: ts("deleted_at"),
+  },
+  (t) => [
+    index("backup_run_started_idx").on(t.startedAt),
+    uniqueIndex("backup_run_single_running_uq").on(t.status).where(sql`status = 'running'`),
+  ],
+);

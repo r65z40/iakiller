@@ -14,6 +14,7 @@ Navigateur ──► Next.js 16 (Node.js)
              ──► Stockage d'objets compatible S3, bucket privé (ou disque local)
              ──► Stripe (Checkout, Billing, Customer Portal, webhooks)
              ──► SMTP (emails transactionnels)
+             ──► Destination de sauvegarde (bucket S3 dédié ou dossier), chiffrée
 Tâches planifiées : `npm run jobs` toutes les 15 minutes (cron ou boucle `--watch`).
 ```
 
@@ -46,11 +47,13 @@ src/
     db/schema.ts            schéma relationnel (source des migrations)
     cards/                  document versionné, service, rendu public, vCard, QR, slugs
     billing/                droits (machine d'état), Stripe, synchronisation, webhooks
+    backup/                 sauvegardes : service, politique de rétention, chiffrement, pg_dump
     orgs/, leads/, analytics/, media/, services/, support/, admin/
     permissions.ts          matrice de permissions centralisée
     context.ts              session → utilisateur → appartenance → droits
 drizzle/                    migrations SQL versionnées
-scripts/                    migrate, seed, jobs, create-admin, ops/backup|restore
+scripts/                    migrate, seed, jobs, create-admin, backup, doctor
+deploy/                     services systemd (application, tâches), Caddyfile, nginx
 tests/unit, tests/integration (Vitest + PostgreSQL réel), tests/e2e (Playwright)
 ```
 
@@ -83,6 +86,8 @@ Suppressions en cascade : la suppression physique d'une organisation entraîne c
 ## Cache et désactivation
 
 Les pages de carte sont rendues dynamiquement (`force-dynamic`) et la redirection du QR est envoyée avec `no-store` : la désactivation est immédiate. Les médias publics ont un cache navigateur de 5 minutes, sans cache partagé (`CDN-Cache-Control: no-store`). Si un CDN est ajouté, il faut purger les adresses `/m/*`, `/{org}/*` et `/r/*` au retrait d'une carte, à la fin d'un droit ou lors d'une suspension.
+
+Les variantes réduites des images publiques (`/m/{id}?w=160|320|640|960`) sont gardées en mémoire par instance (48 Mo maximum, les plus anciennes sont évincées). Elles suivent exactement le même contrôle d'accès que l'original, vérifié avant toute lecture du cache.
 
 ## Environnements
 

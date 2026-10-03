@@ -13,7 +13,7 @@ export interface ObjectStorage {
   delete(key: string): Promise<void>;
 }
 
-class LocalStorage implements ObjectStorage {
+export class LocalStorage implements ObjectStorage {
   constructor(private root: string) {}
   private resolve(key: string) {
     if (!/^[A-Za-z0-9/_.-]+$/.test(key) || key.includes("..")) throw new Error("Clé de stockage invalide");
@@ -36,17 +36,40 @@ class LocalStorage implements ObjectStorage {
   }
 }
 
-class S3Storage implements ObjectStorage {
+export interface S3Options {
+  bucket: string;
+  region?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+}
+
+/** Options S3 lues dans l'environnement avec un préfixe (S3_ pour les médias, BACKUP_S3_ pour les sauvegardes). */
+export function s3OptionsFromEnv(prefix: string, fallbackPrefix?: string): S3Options | null {
+  const get = (k: string) => process.env[prefix + k]?.trim() || (fallbackPrefix ? process.env[fallbackPrefix + k]?.trim() : "") || undefined;
+  const bucket = process.env[prefix + "BUCKET"]?.trim();
+  if (!bucket) return null;
+  return {
+    bucket,
+    region: get("REGION"),
+    endpoint: get("ENDPOINT"),
+    forcePathStyle: get("FORCE_PATH_STYLE") === "true",
+    accessKeyId: get("ACCESS_KEY_ID"),
+    secretAccessKey: get("SECRET_ACCESS_KEY"),
+  };
+}
+
+export class S3Storage implements ObjectStorage {
   private client: S3Client;
-  constructor(private bucket: string) {
+  private bucket: string;
+  constructor(opts: S3Options) {
+    this.bucket = opts.bucket;
     this.client = new S3Client({
-      region: process.env.S3_REGION || "auto",
-      endpoint: process.env.S3_ENDPOINT || undefined,
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
-      credentials:
-        process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
-          ? { accessKeyId: process.env.S3_ACCESS_KEY_ID, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY }
-          : undefined,
+      region: opts.region || "auto",
+      endpoint: opts.endpoint || undefined,
+      forcePathStyle: !!opts.forcePathStyle,
+      credentials: opts.accessKeyId && opts.secretAccessKey ? { accessKeyId: opts.accessKeyId, secretAccessKey: opts.secretAccessKey } : undefined,
     });
   }
   async put(key: string, body: Buffer, contentType: string) {
@@ -70,8 +93,9 @@ let instance: ObjectStorage | null = null;
 export function storage(): ObjectStorage {
   if (!instance) {
     if (process.env.STORAGE_DRIVER === "s3") {
-      if (!process.env.S3_BUCKET) throw new Error("S3_BUCKET manquant");
-      instance = new S3Storage(process.env.S3_BUCKET);
+      const opts = s3OptionsFromEnv("S3_");
+      if (!opts) throw new Error("S3_BUCKET manquant");
+      instance = new S3Storage(opts);
     } else {
       instance = new LocalStorage(path.resolve(/*turbopackIgnore: true*/ process.env.LOCAL_STORAGE_DIR || "./storage"));
     }

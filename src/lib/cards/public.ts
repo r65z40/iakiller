@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { loadEntitlement } from "@/lib/billing/load";
@@ -26,16 +27,19 @@ export async function isCardPubliclyAccessible(card: typeof schema.card.$inferSe
 async function loadAccessible(org: typeof schema.organization.$inferSelect, card: typeof schema.card.$inferSelect): Promise<PublicCardResult> {
   if (org.deletedAt) return { kind: "not_found" };
   if (!(await isCardPubliclyAccessible(card))) return { kind: "unavailable" };
-  const [version] = await db
-    .select()
-    .from(schema.cardVersion)
-    .where(and(eq(schema.cardVersion.id, card.publishedVersionId!), eq(schema.cardVersion.cardId, card.id)));
+  const [[version], brand] = await Promise.all([
+    db
+      .select()
+      .from(schema.cardVersion)
+      .where(and(eq(schema.cardVersion.id, card.publishedVersionId!), eq(schema.cardVersion.cardId, card.id))),
+    getBrand(org.id),
+  ]);
   if (!version) return { kind: "unavailable" };
   const parsed = parseDocument(version.document);
   if (!parsed.success) return { kind: "unavailable" };
   // Les verrous de marque s'appliquent aussi au rendu : un changement de charte par le
   // propriétaire est visible immédiatement sur toutes les cartes publiées.
-  const document = applyBrandLocks(parsed.data, await getBrand(org.id));
+  const document = applyBrandLocks(parsed.data, brand);
   return { kind: "ok", organization: org, card, document, versionId: version.id };
 }
 
@@ -65,6 +69,12 @@ export async function resolvePublicCard(orgSlug: string, cardSlug: string): Prom
   }
   return loadAccessible(org, card);
 }
+
+/**
+ * Variante mémorisée le temps d'une requête : la page et ses métadonnées résolvent
+ * la même carte une seule fois (droits recalculés à chaque nouvelle requête).
+ */
+export const resolvePublicCardForRequest = cache(resolvePublicCard);
 
 /** Résout le jeton stable du QR code vers l'adresse courante de la carte. */
 export async function resolvePublicToken(token: string): Promise<{ kind: "redirect"; path: string } | { kind: "unavailable" } | { kind: "not_found" }> {

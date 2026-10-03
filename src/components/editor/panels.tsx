@@ -2,9 +2,8 @@
 
 import { useId, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Lock, Plus, Trash2 } from "lucide-react";
-import {
-  CONTACT_KINDS, FONTS, LINK_ICONS, SOCIAL_NETWORKS, type CardBanner, type CardBlock, type CardIdentity, type CardTheme, type ContactKind,
-} from "@/lib/cards/document";
+import { CONTACT_KINDS, FONTS, LINK_ICONS, SOCIAL_NETWORKS } from "@/lib/cards/constants";
+import type { CardBanner, CardBlock, CardIdentity, CardTheme, ContactKind } from "@/lib/cards/document";
 import { TEMPLATE_PRESETS } from "@/lib/cards/defaults";
 import { blockId } from "@/lib/cards/client-ids";
 import { parseVideoUrl, normalizeWebUrl, normalizePhone, isValidEmail } from "@/lib/validation/urls";
