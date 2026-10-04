@@ -35,6 +35,27 @@ export const brand = {
   },
 };
 
+export interface PromoBanner {
+  message: string;
+  ctaLabel: string;
+  ctaHref: string;
+  tone: "brand" | "dark" | "success" | "warning";
+  dismissible: boolean;
+  /** Clé de version : change avec le message, pour ré-afficher une bannière masquée après modification. */
+  key: string;
+}
+
+/** Bannière promotionnelle active (activée, non vide, dans la fenêtre de dates), sinon null. */
+export function promoBanner(now = new Date()): PromoBanner | null {
+  const p = settingsSync().promo;
+  if (!p.enabled || !p.message.trim()) return null;
+  const today = now.toISOString().slice(0, 10);
+  if (p.startsAt && today < p.startsAt) return null;
+  if (p.endsAt && today > p.endsAt) return null;
+  const key = Buffer.from(`${p.message}|${p.ctaLabel}|${p.ctaHref}`).toString("base64").slice(0, 24);
+  return { message: p.message, ctaLabel: p.ctaLabel, ctaHref: p.ctaHref, tone: p.tone, dismissible: p.dismissible, key };
+}
+
 /** URL technique fixée par l'environnement (authentification, cookies). */
 export function envAppUrl(): string {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");

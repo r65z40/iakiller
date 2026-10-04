@@ -73,6 +73,22 @@ export async function saveRetentionAction(fd: FormData) {
   }, fd);
 }
 
+export async function savePromoAction(fd: FormData) {
+  await save("promo", async () => {
+    const tone = s(fd, "tone");
+    await updateSettingsSection(await staff(), "promo", {
+      enabled: on(fd, "enabled"),
+      message: s(fd, "message"),
+      ctaLabel: s(fd, "ctaLabel"),
+      ctaHref: s(fd, "ctaHref"),
+      tone: (["brand", "dark", "success", "warning"].includes(tone) ? tone : "brand") as "brand" | "dark" | "success" | "warning",
+      dismissible: on(fd, "dismissible"),
+      startsAt: s(fd, "startsAt"),
+      endsAt: s(fd, "endsAt"),
+    });
+  }, fd);
+}
+
 export async function saveServiceAction(fd: FormData) {
   await save("prestation", async () => {
     await updateSettingsSection(await staff(), "service", {

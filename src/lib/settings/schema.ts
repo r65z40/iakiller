@@ -102,6 +102,19 @@ export const settingsSchema = z.object({
     /** Destinataire des alertes (échec, sauvegarde trop ancienne). Vide = email d'assistance. */
     alertEmail: text(254).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Email invalide"),
   }),
+  /** Bannière promotionnelle affichée en haut du site (et de l'espace client). */
+  promo: z.object({
+    enabled: z.boolean(),
+    message: text(200),
+    ctaLabel: text(40),
+    /** Lien du bouton : chemin interne (/tarifs) ou URL https. Vide = pas de bouton. */
+    ctaHref: text(300).refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//i.test(v), "Lien interne (/…) ou URL http(s) attendu"),
+    tone: z.enum(["brand", "dark", "success", "warning"]),
+    dismissible: z.boolean(),
+    /** Fenêtre d'affichage optionnelle (ISO court AAAA-MM-JJ). Vide = pas de borne. */
+    startsAt: text(40),
+    endsAt: text(40),
+  }),
 });
 
 export type PlatformSettings = z.infer<typeof settingsSchema>;
@@ -153,6 +166,7 @@ export function defaultSettings(): PlatformSettings {
       note: "",
     },
     backup: { enabled: true, frequencyHours: 24, keepDaily: 7, keepWeekly: 4, keepMonthly: 6, alertEmail: env("BACKUP_ALERT_EMAIL") },
+    promo: { enabled: false, message: "", ctaLabel: "", ctaHref: "", tone: "brand", dismissible: true, startsAt: "", endsAt: "" },
   };
 }
 
@@ -172,6 +186,7 @@ export function mergeSettings(stored: unknown): PlatformSettings {
     ),
     analytics: { ...base.analytics, ...(s.analytics ?? {}) },
     backup: { ...base.backup, ...(s.backup ?? {}) },
+    promo: { ...base.promo, ...(s.promo ?? {}) },
   };
   const parsed = settingsSchema.safeParse(merged);
   return parsed.success ? parsed.data : base;

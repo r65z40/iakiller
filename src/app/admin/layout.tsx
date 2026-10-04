@@ -13,6 +13,7 @@ const NAV = [
   ["/admin/utilisateurs", "Utilisateurs"],
   ["/admin/reglages", "Réglages"],
   ["/admin/plans", "Plans et prestations"],
+  ["/admin/promotions", "Codes promo"],
   ["/admin/prestations", "Commandes de création"],
   ["/admin/support", "Support"],
   ["/admin/emails", "Emails"],
