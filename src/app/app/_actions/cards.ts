@@ -23,6 +23,26 @@ export async function createCardAction(_prev: unknown, fd: FormData) {
   return result;
 }
 
+export async function createGuidedCardAction(answers: unknown) {
+  const result = await run(async () => {
+    const ctx = await requireOrgAction("cards.create");
+    const { buildGuidedDocument, guidedTitle } = await import("@/lib/cards/guided");
+    const a = (answers ?? {}) as Record<string, unknown>;
+    const str = (k: string) => (typeof a[k] === "string" ? (a[k] as string) : undefined);
+    const tpl = str("template");
+    const parsed = {
+      firstName: str("firstName"), lastName: str("lastName"), jobTitle: str("jobTitle"), company: str("company"),
+      mobile: str("mobile"), email: str("email"), website: str("website"), address: str("address"),
+      template: (TEMPLATES as readonly string[]).includes(tpl ?? "") ? (tpl as TemplateId) : "classique",
+      primaryColor: str("primaryColor"),
+    };
+    const document = buildGuidedDocument(parsed);
+    return cards.createCard(ctx, { title: guidedTitle(parsed), document });
+  });
+  if (result.ok) redirect(`/app/cartes/${result.data.id}?cree=1`);
+  return result;
+}
+
 export async function saveDraftAction(cardId: string, revision: number, document: unknown, title?: string) {
   return run(async () => cards.saveDraft(await requireOrgAction(), cardId, { revision, document, title }));
 }
