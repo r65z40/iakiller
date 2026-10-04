@@ -138,6 +138,8 @@ export async function startCheckout(actor: Actor, planPriceId: string) {
     mode: "subscription",
     customer,
     line_items: [{ price: price.stripePriceId!, quantity: 1 }],
+    // Le client peut saisir un code promo (coupons/codes créés dans l'admin) directement au paiement.
+    allow_promotion_codes: true,
     client_reference_id: actor.organization.id,
     metadata: { orgId: actor.organization.id, planPriceId: price.id },
     subscription_data: { metadata: { orgId: actor.organization.id, planPriceId: price.id } },

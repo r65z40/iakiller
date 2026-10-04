@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser, getOrgContext, listMemberships } from "@/lib/context";
 import { can } from "@/lib/permissions";
-import { brand } from "@/lib/config";
+import { brand, promoBanner } from "@/lib/config";
+import { PromoBanner } from "@/components/site/PromoBanner";
 import { AppNav, type NavItem } from "./_components/AppNav";
 import { EntitlementBanner } from "./_components/EntitlementBanner";
 import { switchOrganizationAction } from "./_actions/org";
@@ -59,8 +60,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </div>
   );
 
+  const promo = promoBanner();
   return (
     <div className="min-h-dvh bg-surface">
+      {promo && <PromoBanner banner={promo} />}
       {ctx?.supportGrantId && (
         <div role="alert" className="bg-[#14213d] px-4 py-2 text-center text-sm font-semibold text-white">
           Mode assistance : vous intervenez dans « {ctx.organization.name} ». Toutes vos actions sont journalisées.

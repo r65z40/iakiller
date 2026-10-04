@@ -10,7 +10,7 @@ import { Alert, Badge, Button, PageHeader, Panel } from "@/components/ui";
 import { Flash } from "../_lib/Flash";
 import { PromoVideoField } from "./PromoVideoField";
 import {
-  saveAnalyticsAction, saveBillingAction, saveBrandAction, saveCompanyAction, saveLegalAction, saveRetentionAction, saveServiceAction,
+  saveAnalyticsAction, saveBillingAction, saveBrandAction, saveCompanyAction, saveLegalAction, savePromoAction, saveRetentionAction, saveServiceAction,
 } from "./actions";
 
 const input = "mt-1 block min-h-10 w-full rounded-lg border border-line px-3 text-sm font-normal";
@@ -46,6 +46,7 @@ const SECTIONS = [
   ["prestation", "Création accompagnée"],
   ...Object.entries(LEGAL_PAGES).map(([k, l]) => [`legal-${k}`, l] as const),
   ["mesure", "Mesure d'audience"],
+  ["promo", "Bannière promo"],
 ] as const;
 
 export default async function SettingsAdmin({ searchParams }: PageProps<"/admin/reglages">) {
@@ -162,6 +163,29 @@ export default async function SettingsAdmin({ searchParams }: PageProps<"/admin/
         <div><Button size="sm">Enregistrer</Button></div>
       </form>
     );
+  } else if (section === "promo") {
+    const p = s.promo;
+    body = (
+      <form action={savePromoAction} className="grid gap-4 sm:grid-cols-2">
+        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input type="checkbox" name="enabled" defaultChecked={p.enabled} className="h-4 w-4" /> Afficher la bannière</label>
+        <F label="Message" wide hint="Affiché en haut du site et de l'espace client."><input name="message" defaultValue={p.message} maxLength={200} className={input} placeholder="−20 % sur l'abonnement annuel jusqu'au 31 décembre !" /></F>
+        <F label="Texte du bouton (facultatif)"><input name="ctaLabel" defaultValue={p.ctaLabel} maxLength={40} className={input} placeholder="Voir l'offre" /></F>
+        <F label="Lien du bouton (facultatif)" hint="Chemin interne (/tarifs) ou URL https."><input name="ctaHref" defaultValue={p.ctaHref} maxLength={300} className={input} placeholder="/tarifs" /></F>
+        <F label="Couleur">
+          <select name="tone" defaultValue={p.tone} className={input}>
+            <option value="brand">Couleur de marque</option>
+            <option value="dark">Sombre</option>
+            <option value="success">Vert (succès)</option>
+            <option value="warning">Jaune (attention)</option>
+          </select>
+        </F>
+        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="dismissible" defaultChecked={p.dismissible} className="h-4 w-4" /> Le visiteur peut la masquer</label>
+        <F label="Date de début (facultatif)"><input type="date" name="startsAt" defaultValue={p.startsAt} className={input} /></F>
+        <F label="Date de fin (facultatif)"><input type="date" name="endsAt" defaultValue={p.endsAt} className={input} /></F>
+        <p className="text-xs text-muted sm:col-span-2">Sans dates, la bannière s&apos;affiche dès qu&apos;elle est activée. Modifier le message ré-affiche la bannière à ceux qui l&apos;avaient masquée.</p>
+        <div><Button size="sm">Enregistrer</Button></div>
+      </form>
+    );
   }
 
   const status = (k: string) => {
@@ -171,6 +195,7 @@ export default async function SettingsAdmin({ searchParams }: PageProps<"/admin/
     if (k === "marque") return s.brand.publicUrl.startsWith("https://");
     if (k === "conservation") return s.retention.contentAfterEndDays !== null && s.retention.leadsDays !== null && s.retention.auditDays !== null;
     if (k === "prestation") return s.service.published;
+    if (k === "promo") return s.promo.enabled;
     return null;
   };
 

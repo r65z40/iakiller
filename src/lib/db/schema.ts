@@ -379,6 +379,34 @@ export const plan = pgTable("plan", {
   updatedAt: updatedAt(),
 });
 
+/**
+ * Codes promotionnels (miroir local des coupons/codes Stripe). La réduction réelle est appliquée
+ * par Stripe au paiement ; cette table sert à la gestion dans l'admin et au suivi des utilisations.
+ */
+export const promoCode = pgTable("promo_code", {
+  id: text("id").primaryKey(),
+  /** Code saisi par le client (en majuscules), ex. BIENVENUE20. */
+  code: text("code").notNull().unique(),
+  description: text("description").notNull().default(""),
+  stripeCouponId: text("stripe_coupon_id"),
+  stripePromotionCodeId: text("stripe_promotion_code_id"),
+  /** percent | amount */
+  kind: text("kind").notNull(),
+  percentOff: integer("percent_off"),
+  amountOffCents: integer("amount_off_cents"),
+  currency: text("currency").notNull().default("eur"),
+  /** once | forever | repeating */
+  duration: text("duration").notNull().default("once"),
+  durationMonths: integer("duration_months"),
+  maxRedemptions: integer("max_redemptions"),
+  expiresAt: ts("expires_at"),
+  active: boolean("active").notNull().default(true),
+  timesRedeemed: integer("times_redeemed").notNull().default(0),
+  createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const planPrice = pgTable(
   "plan_price",
   {

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { brand } from "@/lib/config";
+import { brand, promoBanner } from "@/lib/config";
+import { PromoBanner } from "@/components/site/PromoBanner";
 
 const NAV = [
   ["/fonctionnement", "Fonctionnement"],
@@ -11,8 +12,10 @@ const NAV = [
 ] as const;
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
+  const promo = promoBanner();
   return (
     <div className="flex min-h-dvh flex-col bg-white">
+      {promo && <PromoBanner banner={promo} />}
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link href="/" className="text-xl font-extrabold text-brand">{brand.name}</Link>
