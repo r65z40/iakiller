@@ -107,6 +107,25 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Vidéo de présentation (si configurée dans l'administration) */}
+      {brand.promoVideoKey && (
+        <section className="mx-auto max-w-4xl px-4 pt-4 pb-8">
+          <div className="overflow-hidden rounded-3xl bg-ink shadow-xl ring-1 ring-line">
+            <video
+              src="/video-accueil"
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full bg-ink"
+            />
+          </div>
+          <p className="mt-3 text-center text-sm text-muted">Découvrez {brand.name} en vidéo.</p>
+        </section>
+      )}
+
       {/* 3 étapes */}
       <section className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="text-center text-3xl font-extrabold">Votre carte en ligne en trois étapes</h2>

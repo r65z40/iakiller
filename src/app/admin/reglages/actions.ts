@@ -40,9 +40,11 @@ async function save(section: string, build: (fd: FormData, current: PlatformSett
 const staff = () => requireStaffAction("platform.settings.manage");
 
 export async function saveBrandAction(fd: FormData) {
-  await save("marque", async () => {
+  await save("marque", async (fd, current) => {
     await updateSettingsSection(await staff(), "brand", {
       name: s(fd, "name"), tagline: s(fd, "tagline"), publicUrl: s(fd, "publicUrl").replace(/\/+$/, ""), supportEmail: s(fd, "supportEmail"), emailFrom: s(fd, "emailFrom"),
+      // La vidéo d'accueil est gérée par son propre téléversement : on conserve la valeur courante.
+      promoVideoKey: current.brand.promoVideoKey, promoVideoType: current.brand.promoVideoType,
     });
   }, fd);
 }

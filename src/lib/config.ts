@@ -18,6 +18,10 @@ export const brand = {
   get supportEmail() {
     return settingsSync().brand.supportEmail || "support@example.invalid";
   },
+  /** Clé de stockage de la vidéo d'accueil (vide = aucune). Servie via /video-accueil. */
+  get promoVideoKey() {
+    return settingsSync().brand.promoVideoKey;
+  },
   legal: {
     get companyName() { return orTodo(settingsSync().company.companyName, "RAISON SOCIALE"); },
     get legalForm() { return orTodo(settingsSync().company.legalForm, "FORME JURIDIQUE"); },
@@ -61,6 +65,11 @@ export const limits = {
   imageMaxPixels: 40_000_000,
   imageMaxDimension: 8000,
   pdfMaxBytes: 15 * 1024 * 1024,
+  /** Vidéo de présentation (page d'accueil) : 50 Mo pour garder un chargement raisonnable. */
+  videoMaxBytes: 50 * 1024 * 1024,
   maxCardsPerPage: 50,
 };
+
+/** Types vidéo acceptés pour la vidéo d'accueil (lecture large sur navigateurs). */
+export const VIDEO_TYPES: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm" };
 
