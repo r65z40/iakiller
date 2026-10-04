@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight, Mail } from "lucide-react";
+import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight, Mail, CalendarClock, ShieldCheck, Car } from "lucide-react";
 import { brand } from "@/lib/config";
 import { listPlans } from "@/lib/billing/service";
 import { DemoCard } from "@/components/site/DemoCard";
@@ -29,8 +29,8 @@ const FEATURES = [
   { icon: RefreshCw, title: "Toujours à jour", text: "Changement de numéro ou de poste : vous modifiez la carte, le QR code déjà imprimé reste valable." },
   { icon: IdCard, title: "Fiche contact (vCard)", text: "« Ajouter aux contacts » enregistre nom, téléphones, email et adresse d'un seul geste." },
   { icon: Smartphone, title: "Pensée pour le mobile", text: "Grands boutons d'appel, lisible au soleil, rapide même en 4G faible. Compatible Apple et Google Wallet." },
-  { icon: Inbox, title: "Des demandes de contact", text: "Formulaire intégré, sans abonnement marketing imposé au visiteur, avec protection anti-spam." },
-  { icon: BarChart3, title: "Statistiques expliquées", text: "Ouvertures, clics et sources — avec la définition de chaque chiffre et ses limites. Aucun chiffre trompeur." },
+  { icon: Inbox, title: "Formulaire sur mesure", text: "Composez votre propre formulaire : vos questions, demande de rendez-vous, champs obligatoires. Les demandes arrivent dans votre espace et par email." },
+  { icon: BarChart3, title: "Statistiques expliquées", text: "Ouvertures, clics, appareils et origines (dont vos QR par support) — avec la définition de chaque chiffre. Aucun chiffre trompeur." },
   { icon: Mail, title: "Signature email assortie", text: "Générez une signature d'email aux couleurs de votre carte, à coller dans Gmail, Outlook ou Apple Mail." },
   { icon: Users, title: "Pour toute l'équipe", text: "Charte graphique commune, champs verrouillés, import CSV des salariés, désactivation immédiate d'un départ." },
 ];
@@ -189,6 +189,47 @@ export default async function Home() {
               <span className="mt-3 inline-block rounded-md bg-brand px-3 py-1.5 text-[13px] font-bold text-white">Voir ma carte de visite</span>
             </div>
             <p className="mt-3 text-center text-xs text-muted">Exemple de signature générée.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Statistiques + formulaire sur mesure */}
+      <section className="bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-center text-3xl font-extrabold">Transformez vos cartes en vrais outils de contact</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-muted">Deux atouts que le papier n&apos;aura jamais : savoir ce qui marche, et recevoir des demandes qualifiées, à votre façon.</p>
+          <div className="mt-10 grid gap-6 lg:grid-cols-2">
+            {/* Statistiques */}
+            <div className="rounded-3xl bg-white p-8 ring-1 ring-line">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white"><BarChart3 className="h-6 w-6" /></div>
+              <h3 className="mt-4 text-xl font-extrabold">Des statistiques claires et honnêtes</h3>
+              <p className="mt-2 text-sm text-muted">Chaque chiffre est défini, avec ses limites. On ne gonfle rien : vous pilotez sur des données fiables.</p>
+              <ul className="mt-5 space-y-2.5 text-sm">
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span><strong>Ouvertures</strong> de la carte et <strong>taux de clic</strong> (appels, emails, itinéraire, site…).</span></li>
+                <li className="flex items-start gap-2"><Car className="mt-0.5 h-4 w-4 shrink-0 text-brand" /> <span><strong>D&apos;où viennent vos visiteurs</strong> : créez un QR par support (carte de visite, véhicule, vitrine…) et comparez-les.</span></li>
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span>Répartition par <strong>appareil, navigateur et pays</strong>, et suivi des <strong>campagnes</strong>.</span></li>
+                <li className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span><strong>Sans cookie ni traceur</strong> par défaut : conçu pour le RGPD, sans bandeau intrusif.</span></li>
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span><strong>Export CSV</strong> pour vos tableaux de bord.</span></li>
+              </ul>
+            </div>
+            {/* Formulaire sur mesure */}
+            <div className="rounded-3xl bg-white p-8 ring-1 ring-line">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white"><Inbox className="h-6 w-6" /></div>
+              <h3 className="mt-4 text-xl font-extrabold">Un formulaire de contact sur mesure</h3>
+              <p className="mt-2 text-sm text-muted">Composez exactement le formulaire dont vous avez besoin — devis, prise de rendez-vous, rappel… — sans aucune ligne de code.</p>
+              <ul className="mt-5 space-y-2.5 text-sm">
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span><strong>Vos propres champs</strong> : ajoutez les questions utiles (budget, ville, type de prestation…).</span></li>
+                <li className="flex items-start gap-2"><CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-brand" /> <span>Champs <strong>date</strong>, <strong>liste déroulante</strong>, texte, email, téléphone — idéal pour une <strong>demande de rendez-vous</strong>.</span></li>
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span>Chaque champ <strong>obligatoire ou facultatif</strong>, avec <strong>anti-spam</strong> intégré.</span></li>
+                <li className="flex items-start gap-2"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand" /> <span>Les demandes arrivent <strong>dans votre espace et par email</strong> (aux adresses de votre choix).</span></li>
+                <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" /> <span>Suivi du <strong>statut</strong>, notes privées et <strong>export CSV</strong> des prospects.</span></li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 text-center">
+            <Link href="/inscription" className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-white transition hover:bg-brand-dark">
+              Essayer gratuitement <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>

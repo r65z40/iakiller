@@ -106,6 +106,13 @@ export async function setQrStyleAction(cardId: string, style: { dark: string; lo
   });
 }
 
+export async function setQrVariantsAction(cardId: string, variants: { label: string }[]) {
+  return run(async () => {
+    const { setCardQrVariants } = await import("@/lib/cards/qr");
+    return setCardQrVariants(await requireOrgAction(), cardId, variants);
+  });
+}
+
 export async function previewImportAction(csv: string) {
   return run(async () => {
     const ctx = await requireOrgAction("cards.create");

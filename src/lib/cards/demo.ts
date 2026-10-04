@@ -55,7 +55,7 @@ export const DEMO_CARDS: { id: string; title: string; template: string; document
         { id: "d2act", hidden: false, type: "actions", showCall: true, showEmail: true, showVcard: true, showWallet: true, callLabel: "Appeler", emailLabel: "Écrire", vcardLabel: "Enregistrer le contact" },
         { id: "d2abo", hidden: false, type: "about", title: "Accompagnement", text: "J'aide les TPE à **structurer leurs process** et à gagner du temps au quotidien.\n\n- Diagnostic en une demi-journée\n- Plan d'action concret\n- Suivi trimestriel", tags: [] },
         { id: "d2app", hidden: false, type: "appointment", title: "Premier échange", label: "Réserver 30 minutes", url: "https://agenda.exemple/lea-bernard", note: "Visioconférence ou téléphone, sans engagement." },
-        { id: "d2frm", hidden: false, type: "leadForm", title: "Être recontacté", intro: "Laissez vos coordonnées, je vous réponds sous 48 h ouvrées.", buttonLabel: "Envoyer", fields: { name: "required", email: "optional", phone: "optional", company: "optional", message: "optional" } },
+        { id: "d2frm", hidden: false, type: "leadForm", title: "Être recontacté", intro: "Laissez vos coordonnées, je vous réponds sous 48 h ouvrées.", buttonLabel: "Envoyer", fields: { name: "required", email: "optional", phone: "optional", company: "optional", message: "optional" }, customFields: [], notifyEmails: [], includeContentInEmail: false },
       ],
     },
   },

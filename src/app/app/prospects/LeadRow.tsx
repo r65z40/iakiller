@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Badge, buttonClass } from "@/components/ui";
 import { deleteLeadAction, updateLeadAction } from "../_actions/members";
 
-interface LeadView { id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; status: string; notes: string; marketingConsent: boolean; createdAt: string; cardTitle: string }
+interface LeadView { id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; extra: { label: string; value: string }[]; status: string; notes: string; marketingConsent: boolean; createdAt: string; cardTitle: string }
 
 export function LeadRow({ lead, canDelete }: { lead: LeadView; canDelete: boolean }) {
   const [pending, start] = useTransition();
@@ -30,6 +30,16 @@ export function LeadRow({ lead, canDelete }: { lead: LeadView; canDelete: boolea
           </select>
         </div>
       </div>
+      {lead.extra.length > 0 && (
+        <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface p-3 text-sm">
+          {lead.extra.map((e, i) => (
+            <div key={i} className="contents">
+              <dt className="font-semibold text-muted">{e.label}</dt>
+              <dd className="whitespace-pre-wrap">{e.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {lead.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-surface p-3 text-sm">{lead.message}</p>}
       <div className="mt-3">
         <label htmlFor={`notes-${lead.id}`} className="text-xs font-semibold text-muted">Notes privées</label>

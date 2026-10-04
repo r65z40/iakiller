@@ -93,6 +93,21 @@ const contactItem = z
 
 const fieldMode = z.enum(["off", "optional", "required"]);
 
+/** Types de champ personnalisé proposés dans le formulaire sur mesure. */
+export const CUSTOM_FIELD_TYPES = ["text", "textarea", "tel", "email", "date", "select"] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
+
+/** Champ de formulaire défini librement par l'utilisateur (libellé, type, obligatoire, options). */
+const customField = z.object({
+  id,
+  label: short(60),
+  type: z.enum(CUSTOM_FIELD_TYPES),
+  required: z.boolean(),
+  /** Choix proposés pour un champ « liste déroulante » ; ignoré pour les autres types. */
+  options: z.array(short(60)).max(20).default([]),
+});
+export type CustomField = z.infer<typeof customField>;
+
 const blockBase = { id, hidden: z.boolean() };
 
 export const blockSchema = z.discriminatedUnion("type", [
@@ -198,6 +213,12 @@ export const blockSchema = z.discriminatedUnion("type", [
       company: fieldMode,
       message: fieldMode,
     }),
+    /** Champs sur mesure ajoutés par l'utilisateur (ex. « Date souhaitée », « Type de prestation »). */
+    customFields: z.array(customField).max(12).default([]),
+    /** Adresses email supplémentaires qui reçoivent une notification de demande (validées à l'envoi). */
+    notifyEmails: z.array(short(254)).max(5).default([]),
+    /** Inclure le détail de la demande dans l'email de notification (sinon, consultable dans l'espace). */
+    includeContentInEmail: z.boolean().default(false),
   }),
 ]);
 export type CardBlock = z.infer<typeof blockSchema>;
@@ -216,11 +237,24 @@ export const documentSchema = z
     doc.blocks.forEach((b, i) => {
       if (ids.has(b.id)) ctx.addIssue({ code: "custom", path: ["blocks", i, "id"], message: "Identifiant de bloc dupliqué" });
       ids.add(b.id);
-      if (b.type === "leadForm" && b.fields.email === "off" && b.fields.phone === "off") {
-        ctx.addIssue({
-          code: "custom",
-          path: ["blocks", i, "fields"],
-          message: "Le formulaire doit demander au moins un email ou un téléphone pour pouvoir recontacter",
+      if (b.type === "leadForm") {
+        const hasStandardContact = b.fields.email !== "off" || b.fields.phone !== "off";
+        const hasCustomContact = b.customFields.some((f) => f.type === "email" || f.type === "tel");
+        if (!hasStandardContact && !hasCustomContact) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["blocks", i, "fields"],
+            message: "Le formulaire doit demander au moins un email ou un téléphone pour pouvoir recontacter",
+          });
+        }
+        const fieldIds = new Set<string>();
+        b.customFields.forEach((f, j) => {
+          if (fieldIds.has(f.id)) ctx.addIssue({ code: "custom", path: ["blocks", i, "customFields", j, "id"], message: "Identifiant de champ dupliqué" });
+          fieldIds.add(f.id);
+          if (!f.label.trim()) ctx.addIssue({ code: "custom", path: ["blocks", i, "customFields", j, "label"], message: "Donnez un libellé à ce champ" });
+          if (f.type === "select" && f.options.filter((o) => o.trim()).length === 0) {
+            ctx.addIssue({ code: "custom", path: ["blocks", i, "customFields", j, "options"], message: "Ajoutez au moins un choix pour une liste déroulante" });
+          }
         });
       }
     });
@@ -263,6 +297,8 @@ export function publicDocument(doc: CardDocument): CardDocument {
       .map((b): CardBlock => {
         if (b.type === "gallery") return { ...b, items: b.items.filter((i) => i.mediaId) };
         if (b.type === "documents") return { ...b, items: b.items.filter((i) => i.mediaId) };
+        // Les réglages de notification du formulaire sont internes : jamais exposés publiquement.
+        if (b.type === "leadForm") return { ...b, notifyEmails: [], includeContentInEmail: false };
         return b;
       }),
   };

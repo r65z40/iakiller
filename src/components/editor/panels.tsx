@@ -406,7 +406,17 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
       );
     case "leadForm": {
       const modes = [{ value: "off" as const, label: "Non demandé" }, { value: "optional" as const, label: "Facultatif" }, { value: "required" as const, label: "Obligatoire" }];
+      const typeOptions = [
+        { value: "text" as const, label: "Texte court" },
+        { value: "textarea" as const, label: "Texte long" },
+        { value: "tel" as const, label: "Téléphone" },
+        { value: "email" as const, label: "Email" },
+        { value: "date" as const, label: "Date" },
+        { value: "select" as const, label: "Liste déroulante" },
+      ];
       const setField = (k: keyof typeof block.fields, v: "off" | "optional" | "required") => onChange({ ...block, fields: { ...block.fields, [k]: v } });
+      const hasStandardContact = block.fields.email !== "off" || block.fields.phone !== "off";
+      const hasCustomContact = block.customFields.some((f) => f.type === "email" || f.type === "tel");
       return (
         <div className="space-y-4">
           {titleField}
@@ -417,7 +427,38 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
           <SelectInput label="Téléphone" value={block.fields.phone} onChange={(v) => setField("phone", v)} options={modes} />
           <SelectInput label="Société" value={block.fields.company} onChange={(v) => setField("company", v)} options={modes} />
           <SelectInput label="Message" value={block.fields.message} onChange={(v) => setField("message", v)} options={modes} />
-          {block.fields.email === "off" && block.fields.phone === "off" && <p className="text-xs font-semibold text-danger">Demandez au moins un email ou un téléphone.</p>}
+          {!hasStandardContact && !hasCustomContact && <p className="text-xs font-semibold text-danger">Demandez au moins un email ou un téléphone (champ standard ou sur mesure).</p>}
+
+          <fieldset className="space-y-3 rounded-lg border border-line p-3">
+            <legend className="px-1 text-sm font-semibold">Champs sur mesure</legend>
+            <p className="text-xs text-muted">Ajoutez vos propres questions (ex. « Date de rendez-vous souhaitée », « Type de prestation »). Idéal pour une prise de rendez-vous.</p>
+            <ItemList items={block.customFields} max={12} addLabel="Ajouter un champ" onChange={(customFields) => onChange({ ...block, customFields })}
+              create={() => ({ id: blockId(), label: "", type: "text" as const, required: false, options: [] })}
+              render={(item, update) => (
+                <>
+                  <TextInput label="Libellé du champ" value={item.label} onChange={(v) => update({ label: v })} maxLength={60} placeholder="Ex. Date souhaitée" />
+                  <SelectInput label="Type" value={item.type} onChange={(v) => update({ type: v })} options={typeOptions} />
+                  {item.type === "select" && (
+                    <TextInput label="Choix (un par ligne)" value={item.options.join("\n")} onChange={(v) => update({ options: v.split("\n").map((o) => o.trim()).filter(Boolean).slice(0, 20) })} maxLength={1200} multiline rows={3} placeholder={"Devis\nRendez-vous\nAutre"} />
+                  )}
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <input type="checkbox" checked={item.required} onChange={(e) => update({ required: e.target.checked })} /> Obligatoire
+                  </label>
+                </>
+              )}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3 rounded-lg border border-line p-3">
+            <legend className="px-1 text-sm font-semibold">Notifications par email</legend>
+            <p className="text-xs text-muted">Par défaut, les responsables et les personnes attribuées à la carte sont prévenus. Ajoutez d&apos;autres adresses (une par ligne) pour recevoir aussi les demandes.</p>
+            <TextInput label="Adresses supplémentaires" value={block.notifyEmails.join("\n")} onChange={(v) => onChange({ ...block, notifyEmails: v.split(/[\n,;]+/).map((e) => e.trim()).filter(Boolean).slice(0, 5) })} maxLength={1300} multiline rows={2} placeholder={"contact@exemple.fr\ncommercial@exemple.fr"} />
+            <label className="flex items-start gap-2 text-sm font-semibold">
+              <input type="checkbox" checked={block.includeContentInEmail} onChange={(e) => onChange({ ...block, includeContentInEmail: e.target.checked })} className="mt-0.5" />
+              <span>Inclure le détail de la demande dans l&apos;email<span className="mt-0.5 block text-xs font-normal text-muted">Pratique, mais les données du prospect transitent alors par email. Sans cette option, l&apos;email signale seulement une nouvelle demande, consultable dans votre espace.</span></span>
+            </label>
+          </fieldset>
+
           <p className="text-xs text-muted">Collectez uniquement ce qui est nécessaire pour recontacter. Le visiteur est informé que ses données vous sont destinées ; la case d&apos;accord marketing est séparée et décochée par défaut.</p>
         </div>
       );

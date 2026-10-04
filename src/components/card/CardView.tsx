@@ -869,6 +869,25 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
           <textarea name="message" rows={4} maxLength={2000} required={fields.message === "required"} className={`${inputCls} py-2`} />
         </label>
       )}
+      {block.customFields.map((f) => {
+        const req = f.required ? <span aria-hidden className="text-[var(--c-primary)]">*</span> : <span className="font-normal text-[var(--c-muted)]">(facultatif)</span>;
+        const name = `cf_${f.id}`;
+        return (
+          <label key={f.id} className="block text-[13px] font-semibold">
+            {f.label} {req}
+            {f.type === "textarea" ? (
+              <textarea name={name} rows={3} maxLength={2000} required={f.required} className={`${inputCls} py-2`} />
+            ) : f.type === "select" ? (
+              <select name={name} required={f.required} defaultValue="" className={inputCls}>
+                <option value="" disabled={f.required}>Choisir…</option>
+                {f.options.filter((o) => o.trim()).map((o, i) => <option key={i} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input name={name} type={f.type === "tel" ? "tel" : f.type === "email" ? "email" : f.type === "date" ? "date" : "text"} required={f.required} maxLength={f.type === "email" ? 254 : 200} className={inputCls} />
+            )}
+          </label>
+        );
+      })}
       {/* Champ piège anti-robot, invisible pour les humains. */}
       <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label>Ne pas remplir<input name="website" tabIndex={-1} autoComplete="off" /></label>

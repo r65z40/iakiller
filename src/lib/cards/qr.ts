@@ -11,9 +11,48 @@ import { audit } from "@/lib/audit";
 import { isHexColor } from "@/lib/validation/urls";
 import { getCardForActor, type Actor } from "./service";
 
-/** URL stable encodée dans le QR code. */
-export function qrTargetUrl(publicToken: string) {
-  return `${appUrl()}/r/${publicToken}`;
+/** URL stable encodée dans le QR code. Une variante ajoute `?c={slug}` pour tracer l'origine. */
+export function qrTargetUrl(publicToken: string, variantSlug?: string | null) {
+  const base = `${appUrl()}/r/${publicToken}`;
+  return variantSlug ? `${base}?c=${encodeURIComponent(variantSlug)}` : base;
+}
+
+/** Variante de QR code (origine) : un libellé affiché et un slug technique court et stable. */
+export interface QrVariant {
+  slug: string;
+  label: string;
+}
+
+/** Nombre maximal de variantes par carte (au-delà, l'intérêt du suivi s'estompe). */
+export const MAX_QR_VARIANTS = 12;
+
+/** Transforme un libellé en slug sûr (ascii minuscule, tirets), tronqué à 32 caractères. */
+export function slugifyVariant(label: string): string {
+  return label
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
+/** Valide/normalise une liste de variantes : libellés propres, slugs uniques, bornée. */
+export function normalizeQrVariants(input: unknown): QrVariant[] {
+  if (!Array.isArray(input)) return [];
+  const out: QrVariant[] = [];
+  const seen = new Set<string>();
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const label = String((raw as { label?: unknown }).label ?? "").trim().slice(0, 40);
+    if (!label) continue;
+    const slug = slugifyVariant(label);
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push({ slug, label });
+    if (out.length >= MAX_QR_VARIANTS) break;
+  }
+  return out;
 }
 
 export interface QrStyle {
@@ -115,8 +154,8 @@ async function verifiedStyle(url: string, style: QrStyle, logoId: string | null,
 }
 
 /** QR d'une carte : style enregistré, revérifié ; repli sur le QR standard en cas de doute. */
-export async function cardQr(card: typeof schema.card.$inferSelect, format: "png" | "svg") {
-  const url = qrTargetUrl(card.publicToken);
+export async function cardQr(card: typeof schema.card.$inferSelect, format: "png" | "svg", variantSlug?: string | null) {
+  const url = qrTargetUrl(card.publicToken, variantSlug);
   const style = card.qrStyle ?? DEFAULT_QR_STYLE;
   const logoId = await resolveLogoId(card, style.logo);
   const logo = logoId ? await logoPng(card.organizationId, logoId, 256) : null;
@@ -136,6 +175,15 @@ export async function setCardQrStyle(actor: Actor, cardId: string, input: QrStyl
   if (!check.ok) throw new DomainError("invalid", check.reason);
   await db.update(schema.card).set({ qrStyle: style, updatedAt: new Date() }).where(eq(schema.card.id, card.id));
   await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: actor.supportGrantId ? "staff" : "user", action: "card.qr_style", targetType: "card", targetId: cardId, metadata: { ...style } });
+}
+
+/** Enregistre la liste des variantes d'origine d'une carte (après normalisation). */
+export async function setCardQrVariants(actor: Actor, cardId: string, input: unknown): Promise<QrVariant[]> {
+  const card = await getCardForActor(actor, cardId);
+  const variants = normalizeQrVariants(input);
+  await db.update(schema.card).set({ qrVariants: variants, updatedAt: new Date() }).where(eq(schema.card.id, card.id));
+  await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: actor.supportGrantId ? "staff" : "user", action: "card.qr_variants", targetType: "card", targetId: cardId, metadata: { count: variants.length } });
+  return variants;
 }
 
 // Rétrocompatibilité (QR standard noir sur blanc).

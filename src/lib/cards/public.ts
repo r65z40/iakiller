@@ -77,8 +77,15 @@ export async function resolvePublicCard(orgSlug: string, cardSlug: string): Prom
  */
 export const resolvePublicCardForRequest = cache(resolvePublicCard);
 
-/** Résout le jeton stable du QR code vers l'adresse courante de la carte. */
-export async function resolvePublicToken(token: string): Promise<{ kind: "redirect"; path: string } | { kind: "unavailable" } | { kind: "not_found" }> {
+/**
+ * Résout le jeton stable du QR code vers l'adresse courante de la carte.
+ * `variantSlug` (paramètre `?c=` du QR) identifie l'origine du scan : s'il correspond à une
+ * variante déclarée sur la carte, on renvoie son slug comme `campaign` pour le suivi statistique.
+ */
+export async function resolvePublicToken(
+  token: string,
+  variantSlug?: string | null,
+): Promise<{ kind: "redirect"; path: string; campaign?: string } | { kind: "unavailable" } | { kind: "not_found" }> {
   if (!/^[A-Za-z0-9_-]{10,64}$/.test(token)) return { kind: "not_found" };
   const [row] = await db
     .select({ card: schema.card, org: schema.organization })
@@ -87,7 +94,9 @@ export async function resolvePublicToken(token: string): Promise<{ kind: "redire
     .where(eq(schema.card.publicToken, token));
   if (!row || row.org.deletedAt) return { kind: "not_found" };
   if (!(await isCardPubliclyAccessible(row.card))) return { kind: "unavailable" };
-  return { kind: "redirect", path: `/${row.org.slug}/${row.card.slug}` };
+  const clean = typeof variantSlug === "string" && /^[a-z0-9-]{1,32}$/.test(variantSlug) ? variantSlug : null;
+  const campaign = clean && (row.card.qrVariants ?? []).some((v) => v.slug === clean) ? clean : undefined;
+  return { kind: "redirect", path: `/${row.org.slug}/${row.card.slug}`, campaign };
 }
 
 /**

@@ -101,7 +101,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/app/statis
             </table>
           )}
         </Panel>
-        <Panel title="Campagnes (utm_campaign)">{list(campaigns.filter((c) => c.key !== "—"))}</Panel>
+        <Panel title="Campagnes et origines QR">{campaigns.filter((c) => c.key !== "—").length === 0 ? <p className="text-sm text-muted">Aucune donnée. Créez des origines de QR (onglet « QR code et partage » d&apos;une carte) ou ajoutez un paramètre utm_campaign à vos liens.</p> : list(campaigns.filter((c) => c.key !== "—"))}</Panel>
         <Panel title="Appareils">{list(devices, DEVICE_LABELS)}</Panel>
         <Panel title="Navigateurs">{list(browsers)}</Panel>
         <Panel title="Pays (si fourni par l'hébergeur)">{list(countries)}</Panel>
@@ -114,6 +114,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/app/statis
           <li><strong>Taux de formulaire</strong> = formulaires envoyés avec succès ÷ ouvertures mesurées. Il ne mesure pas l&apos;ensemble de vos conversions commerciales.</li>
           <li>Un clic « Appeler » ou « Email » mesure une intention, pas un appel passé ni un message envoyé. Un téléchargement de vCard ne prouve pas l&apos;ajout aux contacts.</li>
           <li>Un passage par le lien du QR code ne prouve pas un scan physique (le lien peut être partagé).</li>
+          <li><strong>Origines QR</strong> : si vous créez plusieurs QR pour une même carte (ex. « Carte de visite », « Véhicule »), le support d&apos;où vient chaque ouverture apparaît dans « Campagnes et origines QR ».</li>
           <li>Aucun « visiteur unique » n&apos;est calculé : aucun identifiant persistant n&apos;est déposé sur l&apos;appareil du visiteur.</li>
         </ul>
       </Panel>
