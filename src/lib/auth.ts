@@ -17,8 +17,16 @@ export const auth = betterAuth({
   appName: brand.name,
   baseURL: appUrl(),
   secret: process.env.BETTER_AUTH_SECRET,
-  // Domaine réglé dans l'administration + URL technique (APP_URL).
-  trustedOrigins: () => [...new Set([envAppUrl(), appUrl()])],
+  // Origines de confiance (protection anti-CSRF) : URL technique (APP_URL), domaine réglé en
+  // administration, plus toute origine listée dans AUTH_TRUSTED_ORIGINS (séparées par des
+  // virgules). Utile pour se connecter via une IP ou un nom d'hôte de réseau local, ex. :
+  //   AUTH_TRUSTED_ORIGINS=http://192.168.1.50:3000,http://mon-serveur.local:3000
+  trustedOrigins: () =>
+    [...new Set([
+      envAppUrl(),
+      appUrl(),
+      ...(process.env.AUTH_TRUSTED_ORIGINS ?? "").split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean),
+    ])],
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
