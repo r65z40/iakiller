@@ -36,9 +36,31 @@ const securityHeaders = [
   ...(isDev ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
 ];
 
+// En développement, Next.js bloque par défaut les requêtes vers ses ressources internes
+// (/_next/*) venant d'une origine autre que localhost. Pour se connecter via une IP ou un nom
+// d'hôte de réseau local, il faut donc autoriser ces hôtes. On les déduit d'AUTH_TRUSTED_ORIGINS
+// (même variable que l'authentification) pour n'avoir qu'un seul réglage.
+const devAllowedHosts = [
+  ...new Set(
+    (process.env.AUTH_TRUSTED_ORIGINS ?? "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
+      .map((o) => {
+        try {
+          return new URL(o).hostname;
+        } catch {
+          return o.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+        }
+      })
+      .filter(Boolean),
+  ),
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["sharp", "pg"],
+  ...(devAllowedHosts.length ? { allowedDevOrigins: devAllowedHosts } : {}),
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
   },
