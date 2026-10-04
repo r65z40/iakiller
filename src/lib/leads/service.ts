@@ -24,6 +24,8 @@ export interface LeadInput {
   message?: unknown;
   website?: unknown; // champ piège
   marketingConsent?: unknown;
+  /** Réponses aux champs sur mesure, transmises sous la forme `cf_<id>`. */
+  [key: string]: unknown;
 }
 
 export type LeadResult = { ok: true } | { ok: false; status: number; error: string };
@@ -67,6 +69,20 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
   if (values.email && !isValidEmail(values.email)) return { ok: false, status: 400, error: "Adresse email invalide." };
   if (values.phone && !normalizePhone(values.phone)) return { ok: false, status: 400, error: "Numéro de téléphone invalide." };
 
+  // Champs sur mesure : on ne conserve que ceux définis sur la carte, avec leur libellé courant.
+  const extra: { label: string; value: string }[] = [];
+  for (const f of form.customFields) {
+    const raw = str(input[`cf_${f.id}`], f.type === "textarea" ? 2000 : 254);
+    if (!raw) {
+      if (f.required) return { ok: false, status: 400, error: "Merci de remplir les champs obligatoires." };
+      continue;
+    }
+    if (f.type === "email" && !isValidEmail(raw.toLowerCase())) return { ok: false, status: 400, error: `Adresse email invalide pour « ${f.label} ».` };
+    if (f.type === "tel" && !normalizePhone(raw)) return { ok: false, status: 400, error: `Numéro invalide pour « ${f.label} ».` };
+    if (f.type === "select" && !f.options.includes(raw)) return { ok: false, status: 400, error: `Choix invalide pour « ${f.label} ».` };
+    extra.push({ label: f.label.slice(0, 60), value: raw });
+  }
+
   const dedupeHash = sha256([card.id, values.email, values.phone, values.message].join("|"));
   const since = new Date(now.getTime() - 24 * 3600_000);
   const [dup] = await db.select({ id: schema.lead.id }).from(schema.lead).where(and(eq(schema.lead.dedupeHash, dedupeHash), gte(schema.lead.createdAt, since))).limit(1);
@@ -85,11 +101,11 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     phone: values.phone || null,
     company: values.company || null,
     message: values.message || null,
+    extra: extra.length ? extra : null,
     marketingConsent: input.marketingConsent === true,
     dedupeHash,
   });
 
-  // Notification sans le contenu de la demande (consultable uniquement dans l'espace).
   const assignees = await db
     .select({ email: schema.user.email })
     .from(schema.cardAssignment)
@@ -100,14 +116,29 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     .from(schema.membership)
     .innerJoin(schema.user, eq(schema.user.id, schema.membership.userId))
     .where(and(eq(schema.membership.organizationId, card.organizationId), inArray(schema.membership.role, ["owner", "manager"])));
+  // Destinataires supplémentaires choisis sur la carte (emails valides uniquement).
+  const custom = form.notifyEmails.map((e) => e.trim().toLowerCase()).filter((e) => isValidEmail(e));
   // Limite les notifications par carte (anti-inondation des boîtes mail d'une organisation) :
   // le prospect est toujours enregistré, mais au-delà on n'envoie plus d'email.
   const recipients =
     rateLimit(`leadnotif:${card.id}`, 10, 3600_000, now.getTime())
-      ? [...new Set([...assignees, ...managers].map((r) => r.email))].slice(0, 20)
+      ? [...new Set([...assignees, ...managers].map((r) => r.email).concat(custom))].slice(0, 25)
       : [];
+  // Sur demande explicite (par carte), le détail accompagne la notification ; sinon lien vers l'espace.
+  const email = form.includeContentInEmail
+    ? templates.leadReceivedDetailed({
+        cardTitle: card.title,
+        url: `${appUrl()}/app/prospects`,
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        company: values.company,
+        message: values.message,
+        extra,
+      })
+    : templates.leadReceived({ cardTitle: card.title, url: `${appUrl()}/app/prospects` });
   for (const to of recipients) {
-    await sendEmail({ to, template: "leadReceived", email: templates.leadReceived({ cardTitle: card.title, url: `${appUrl()}/app/prospects` }) });
+    await sendEmail({ to, template: form.includeContentInEmail ? "leadReceivedDetailed" : "leadReceived", email });
   }
   return { ok: true };
 }
@@ -189,7 +220,19 @@ export async function exportLeadsCsv(actor: Actor) {
   }
   await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: "user", action: "lead.export", metadata: { count: all.length } });
   return toCsv(
-    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Accord marketing", "Statut", "Notes"],
-    all.map(({ lead, cardTitle }) => [lead.createdAt.toISOString(), cardTitle ?? "", lead.name, lead.email, lead.phone, lead.company, lead.message, lead.marketingConsent ? "oui" : "non", lead.status, lead.notes]),
+    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Champs sur mesure", "Accord marketing", "Statut", "Notes"],
+    all.map(({ lead, cardTitle }) => [
+      lead.createdAt.toISOString(),
+      cardTitle ?? "",
+      lead.name,
+      lead.email,
+      lead.phone,
+      lead.company,
+      lead.message,
+      (lead.extra ?? []).map((e) => `${e.label}: ${e.value}`).join(" | "),
+      lead.marketingConsent ? "oui" : "non",
+      lead.status,
+      lead.notes,
+    ]),
   );
 }

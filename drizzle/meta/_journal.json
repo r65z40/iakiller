@@ -43,6 +43,20 @@
       "when": 1791028134620,
       "tag": "0005_backups",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791108127834,
+      "tag": "0006_card_qr_variants",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791108497473,
+      "tag": "0007_lead_extra",
+      "breakpoints": true
     }
   ]
 }

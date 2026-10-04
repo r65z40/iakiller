@@ -222,6 +222,12 @@ export const card = pgTable(
     draft: jsonb("draft").$type<CardDocument>().notNull(),
     /** Personnalisation du QR code (couleur, logo), validée par un test de lecture. */
     qrStyle: jsonb("qr_style").$type<{ dark: string; logo: "none" | "card" | "brand" }>(),
+    /**
+     * Variantes de QR code (origines) : chaque variante produit un QR distinct dont le scan
+     * est tracé sous son libellé (ex. « Carte de visite », « Véhicule »). Permet de savoir
+     * d'où viennent les visiteurs. `null`/[] = une seule origine générale.
+     */
+    qrVariants: jsonb("qr_variants").$type<{ slug: string; label: string }[]>(),
     /** Incrémenté à chaque sauvegarde du brouillon ; sert à détecter les conflits. */
     draftRevision: integer("draft_revision").notNull().default(1),
     draftUpdatedAt: ts("draft_updated_at").notNull().defaultNow(),
@@ -600,6 +606,8 @@ export const lead = pgTable(
     phone: text("phone"),
     company: text("company"),
     message: text("message"),
+    /** Réponses aux champs personnalisés du formulaire sur mesure : [{ label, value }]. */
+    extra: jsonb("extra").$type<{ label: string; value: string }[]>(),
     /** Accord marketing distinct, facultatif, décoché par défaut. */
     marketingConsent: boolean("marketing_consent").notNull().default(false),
     /** new | contacted | done */

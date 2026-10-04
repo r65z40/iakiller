@@ -1,0 +1,1 @@
+ALTER TABLE "card" ADD COLUMN "qr_variants" jsonb;

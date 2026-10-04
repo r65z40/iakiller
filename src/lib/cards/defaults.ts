@@ -66,6 +66,9 @@ export function newBlock(type: BlockType): CardBlock {
         intro: "Laissez vos coordonnées, je vous réponds rapidement.",
         buttonLabel: "Envoyer",
         fields: { name: "optional", email: "optional", phone: "optional", company: "off", message: "optional" },
+        customFields: [],
+        notifyEmails: [],
+        includeContentInEmail: false,
       };
   }
 }

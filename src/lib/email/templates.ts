@@ -56,6 +56,23 @@ export const templates = {
   leadReceived: (p: { cardTitle: string; url: string }) =>
     layout("Nouvelle demande de contact", [`Une personne a envoyé une demande depuis la carte « ${p.cardTitle} ».`, "Pour protéger ses données, le détail est consultable uniquement dans votre espace."], { label: "Voir la demande", url: p.url }),
 
+  // Variante incluant le détail de la demande (activée explicitement carte par carte).
+  leadReceivedDetailed: (p: { cardTitle: string; url: string; name?: string; email?: string; phone?: string; company?: string; message?: string; extra?: { label: string; value: string }[] }) => {
+    const details = [
+      p.name && `Nom : ${p.name}`,
+      p.email && `Email : ${p.email}`,
+      p.phone && `Téléphone : ${p.phone}`,
+      p.company && `Société : ${p.company}`,
+      ...(p.extra ?? []).map((e) => `${e.label} : ${e.value}`),
+      p.message && `Message : ${p.message}`,
+    ].filter(Boolean) as string[];
+    return layout(
+      "Nouvelle demande de contact",
+      [`Une personne a envoyé une demande depuis la carte « ${p.cardTitle} » :`, ...details, "Vous pouvez aussi la retrouver et y répondre depuis votre espace."],
+      { label: "Voir la demande", url: p.url },
+    );
+  },
+
   serviceOrderUpdate: (p: { status: string; url: string }) =>
     layout("Votre création accompagnée avance", [`Nouveau statut : ${p.status}.`], { label: "Suivre ma demande", url: p.url }),
 

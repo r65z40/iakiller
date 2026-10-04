@@ -7,14 +7,14 @@ import { BLOCK_LIBRARY, blockLabel, newBlock } from "@/lib/cards/defaults";
 import { blockId } from "@/lib/cards/client-ids";
 import { CardView, type MediaInfo } from "@/components/card/CardView";
 import { buttonClass } from "@/components/ui";
-import { publishCardAction, renameCardSlugAction, setQrStyleAction, restoreVersionAction, setCardAssigneesAction, unpublishCardAction } from "@/app/app/_actions/cards";
+import { publishCardAction, renameCardSlugAction, setQrStyleAction, setQrVariantsAction, restoreVersionAction, setCardAssigneesAction, unpublishCardAction } from "@/app/app/_actions/cards";
 import { BlockList } from "./BlockList";
 import { BannerPanel, BlockPanel, IdentityPanel, ThemePanel, type LockState } from "./panels";
 import type { LibraryItem } from "./MediaPicker";
 import { useAutosave, type SaveStatus } from "./useAutosave";
 
 export interface EditorProps {
-  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean; qrStyle: { dark: string; logo: "none" | "card" | "brand" } };
+  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean; qrStyle: { dark: string; logo: "none" | "card" | "brand" }; qrVariants: { slug: string; label: string }[] };
   initialDoc: CardDocument;
   library: LibraryItem[];
   locks: LockState;
@@ -266,7 +266,7 @@ export function Editor(props: EditorProps) {
     propsPanel = <ThemePanel theme={doc.theme} onChange={(theme) => commit({ ...doc, theme })} locks={props.locks} />;
   } else if (selection === "qr") {
     propsTitle = "QR code et partage";
-    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} />;
+    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} initialVariants={props.card.qrVariants} />;
   } else if (selection === "versions") {
     propsTitle = "Versions publiées";
     propsPanel = <VersionsPanel cardId={props.card.id} versions={props.versions} flush={autosave.flush} />;
@@ -377,7 +377,80 @@ export function Editor(props: EditorProps) {
   );
 }
 
-function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" } }) {
+function slugifyLabel(label: string): string {
+  return label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+}
+
+function QrVariantsPanel({ cardId, shortUrl, initial }: { cardId: string; shortUrl: string; initial: { slug: string; label: string }[] }) {
+  const [variants, setVariants] = useState(initial);
+  const [draft, setDraft] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  const save = (next: { slug: string; label: string }[]) =>
+    start(async () => {
+      const r = await setQrVariantsAction(cardId, next.map((v) => ({ label: v.label })));
+      if (r.ok) { setVariants(r.data); setMsg({ ok: true, text: "Origines enregistrées." }); }
+      else setMsg({ ok: false, text: r.error });
+    });
+
+  const add = (label: string) => {
+    const clean = label.trim();
+    if (!clean) return;
+    const slug = slugifyLabel(clean);
+    if (!slug || variants.some((v) => v.slug === slug)) { setMsg({ ok: false, text: "Nom vide ou déjà utilisé." }); return; }
+    if (variants.length >= 12) { setMsg({ ok: false, text: "12 origines maximum." }); return; }
+    save([...variants, { slug, label: clean }]);
+    setDraft("");
+  };
+
+  const linkFor = (slug: string) => `${shortUrl}?c=${slug}`;
+
+  return (
+    <fieldset className="space-y-3 rounded-lg border border-line p-3">
+      <legend className="px-1 font-semibold">Origines (QR par support)</legend>
+      <p className="text-xs text-muted">Créez un QR différent par support (ex. « Carte de visite », « Véhicule », « Vitrine »). Chaque origine a son propre QR à télécharger, et vous saurez dans vos statistiques (onglet Campagnes) d&apos;où viennent les visiteurs.</p>
+
+      {variants.length === 0 && (
+        <button type="button" disabled={pending} className={buttonClass("secondary", "sm")} onClick={() => save([{ slug: "carte-de-visite", label: "Carte de visite" }, { slug: "vehicule", label: "Véhicule" }])}>
+          Ajouter les exemples (Carte de visite, Véhicule)
+        </button>
+      )}
+
+      <ul className="space-y-2">
+        {variants.map((v) => (
+          <li key={v.slug} className="rounded-lg border border-line p-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold">{v.label}</span>
+              <button type="button" disabled={pending} className="text-xs font-semibold text-danger hover:underline" onClick={() => save(variants.filter((x) => x.slug !== v.slug))}>Supprimer</button>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/app/cartes/${cardId}/qr?format=svg&c=${v.slug}`} alt={`QR ${v.label}`} className="h-16 w-16 rounded bg-white p-1 ring-1 ring-line" />
+              <div className="min-w-0 flex-1">
+                <div className="flex gap-2">
+                  <a href={`/app/cartes/${cardId}/qr?format=png&download=1&c=${v.slug}`} className={buttonClass("primary", "sm")}>PNG</a>
+                  <a href={`/app/cartes/${cardId}/qr?format=svg&download=1&c=${v.slug}`} className={buttonClass("secondary", "sm")}>SVG</a>
+                  <button type="button" className={buttonClass("secondary", "sm")} onClick={async () => { await navigator.clipboard.writeText(linkFor(v.slug)); setCopied(v.slug); setTimeout(() => setCopied(null), 2000); }}>{copied === v.slug ? "Copié" : "Copier le lien"}</button>
+                </div>
+                <code className="mt-1 block truncate text-[11px] text-muted">{linkFor(v.slug)}</code>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex gap-2">
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} maxLength={40} placeholder="Nouvelle origine (ex. Flyer)" className="min-h-10 w-full rounded-lg border border-line px-2 text-sm" aria-label="Nom de l'origine" />
+        <button type="button" disabled={pending || !draft.trim()} className={buttonClass("secondary", "sm")} onClick={() => add(draft)}>Ajouter</button>
+      </div>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`text-xs font-semibold ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</p>}
+    </fieldset>
+  );
+}
+
+function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initialVariants }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" }; initialVariants: { slug: string; label: string }[] }) {
   const [copied, setCopied] = useState(false);
   const [style, setStyle] = useState(initialStyle);
   const [version, setVersion] = useState(0);
@@ -418,6 +491,7 @@ function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle }: { car
       </div>
       <p className="text-muted">Le QR code pointe vers un lien permanent ({shortUrl}). Il reste valable si vous changez l&apos;adresse de la carte, et affiche une page d&apos;indisponibilité si la carte est retirée ou si l&apos;abonnement prend fin.</p>
       {!published && <p className="font-semibold text-warning">La carte n&apos;est pas encore publiée : le QR mène pour l&apos;instant à une page d&apos;indisponibilité.</p>}
+      <QrVariantsPanel cardId={cardId} shortUrl={shortUrl} initial={initialVariants} />
       <div>
         <p className="font-semibold">Adresse de la carte</p>
         <div className="mt-1 flex gap-2">
