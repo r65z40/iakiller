@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, Sparkles, ArrowRight, Mail, CalendarClock, ShieldCheck, Car } from "lucide-react";
+import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, ArrowRight, Mail, CalendarClock, ShieldCheck, Car } from "lucide-react";
 import { brand } from "@/lib/config";
 import { listPlans } from "@/lib/billing/service";
 import { DemoCard } from "@/components/site/DemoCard";
@@ -58,38 +58,73 @@ export default async function Home() {
 
       {/* Héros */}
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-soft via-white to-white">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl" aria-hidden />
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:py-20">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/15 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-brand/10 blur-3xl" aria-hidden />
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-brand ring-1 ring-brand/20">
-              <Sparkles className="h-4 w-4" /> Essai gratuit 7 jours, sans carte bancaire
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-semibold text-brand shadow-sm ring-1 ring-brand/20 backdrop-blur">
+              <span className="relative flex h-2 w-2" aria-hidden>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand/60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+              </span>
+              Essai gratuit 7 jours · sans carte bancaire
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-              La carte de visite <span className="text-brand">numérique</span> des artisans, indépendants et PME.
+            <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.6rem]">
+              Votre carte de visite,{" "}
+              <span className="bg-gradient-to-r from-brand to-brand-dark bg-clip-text text-transparent">en version numérique</span>.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-muted">
-              Créez votre carte en quelques minutes, partagez-la par QR code ou par lien, et recevez des demandes de contact. Ou confiez sa création à notre équipe.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+              Pensée pour les <strong className="text-ink">artisans, indépendants et PME</strong>. Créez-la en quelques minutes,
+              partagez-la par QR code ou par lien, et recevez des demandes de contact. Ou confiez sa création à notre équipe.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/inscription" className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-dark">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/inscription" className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3.5 font-semibold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark hover:shadow-brand/30">
                 Créer ma carte gratuitement <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/modeles" className="rounded-lg bg-white px-5 py-3 font-semibold ring-1 ring-line transition hover:bg-surface">Voir des exemples</Link>
+              <Link href="/modeles" className="rounded-xl bg-white px-6 py-3.5 font-semibold ring-1 ring-line transition hover:bg-surface">Voir des exemples</Link>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Sans carte bancaire</li>
-              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Sans cookie de suivi par défaut</li>
-              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> QR code permanent</li>
-              <li className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-success" /> Conçue pour le RGPD</li>
+            <p className="mt-3 text-sm text-muted">Aucune compétence technique requise · prêt en 5 minutes.</p>
+            <ul className="mt-8 flex flex-wrap gap-2">
+              {["Sans carte bancaire", "Sans cookie de suivi par défaut", "QR code permanent", "Conçue pour le RGPD"].map((t) => (
+                <li key={t} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line">
+                  <Check className="h-4 w-4 text-success" /> {t}
+                </li>
+              ))}
             </ul>
           </div>
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute inset-0 -z-10 translate-x-6 translate-y-6 rounded-[2rem] bg-brand/10" aria-hidden />
+            {/* Badges flottants décoratifs */}
+            <div className="absolute -left-4 top-10 z-10 hidden items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold shadow-lg ring-1 ring-line sm:flex" aria-hidden>
+              <QrCode className="h-4 w-4 text-brand" /> QR scanné
+            </div>
+            <div className="absolute -right-4 bottom-16 z-10 hidden items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold shadow-lg ring-1 ring-line sm:flex" aria-hidden>
+              <BarChart3 className="h-4 w-4 text-brand" /> +1 ouverture
+            </div>
             <DemoCard id="classique" />
-            <p className="mt-3 text-center text-xs text-muted">Exemple interactif et fictif réalisé avec {brand.name}.</p>
+            <p className="mt-4 text-center text-xs text-muted">Exemple interactif et fictif réalisé avec {brand.name}.</p>
           </div>
         </div>
       </section>
+
+      {/* Vidéo de présentation (si configurée dans l'administration) */}
+      {brand.promoVideoKey && (
+        <section className="mx-auto max-w-4xl px-4 pt-4 pb-8">
+          <div className="overflow-hidden rounded-3xl bg-ink shadow-xl ring-1 ring-line">
+            <video
+              src="/video-accueil"
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full bg-ink"
+            />
+          </div>
+          <p className="mt-3 text-center text-sm text-muted">Découvrez {brand.name} en vidéo.</p>
+        </section>
+      )}
 
       {/* 3 étapes */}
       <section className="mx-auto max-w-6xl px-4 py-16">

@@ -8,6 +8,7 @@ import { envAppUrl } from "@/lib/config";
 import { formatDateTime } from "@/lib/format";
 import { Alert, Badge, Button, PageHeader, Panel } from "@/components/ui";
 import { Flash } from "../_lib/Flash";
+import { PromoVideoField } from "./PromoVideoField";
 import {
   saveAnalyticsAction, saveBillingAction, saveBrandAction, saveCompanyAction, saveLegalAction, saveRetentionAction, saveServiceAction,
 } from "./actions";
@@ -71,6 +72,12 @@ export default async function SettingsAdmin({ searchParams }: PageProps<"/admin/
         <F label="Expéditeur des emails" hint="Ex. Marque <no-reply@domaine.fr> ; le domaine doit être autorisé chez votre fournisseur SMTP (SPF/DKIM)."><input name="emailFrom" defaultValue={s.brand.emailFrom} className={input} /></F>
         <div><Button size="sm">Enregistrer</Button></div>
       </form>
+    );
+    body = (
+      <>
+        {body}
+        <PromoVideoField hasVideo={!!s.brand.promoVideoKey} />
+      </>
     );
   } else if (section === "societe") {
     const c = s.company;

@@ -39,6 +39,9 @@ export const settingsSchema = z.object({
     publicUrl: text(200).refine((v) => v === "" || /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(v), "Adresse attendue sous la forme https://domaine.fr (sans chemin)"),
     supportEmail: text(254),
     emailFrom: text(254),
+    /** Vidéo de présentation affichée sur la page d'accueil (uploadée via l'admin). Vide = aucune vidéo. */
+    promoVideoKey: text(200),
+    promoVideoType: text(60),
   }),
   company: z.object({
     companyName: text(160),
@@ -118,6 +121,8 @@ export function defaultSettings(): PlatformSettings {
       publicUrl: "",
       supportEmail: env("SUPPORT_EMAIL") || "support@example.invalid",
       emailFrom: env("EMAIL_FROM"),
+      promoVideoKey: "",
+      promoVideoType: "",
     },
     company: {
       companyName: env("LEGAL_COMPANY_NAME"),
