@@ -22,10 +22,10 @@ export async function signUpAndCreateOrg(page: Page, orgName: string) {
 }
 
 export async function createCard(page: Page, title: string) {
-  await page.goto("/app/cartes");
+  await page.goto("/app/cartes/nouvelle");
   await page.getByLabel("Nom interne de la carte").fill(title);
-  await page.getByRole("button", { name: "Créer", exact: true }).click();
-  await page.waitForURL(/\/app\/cartes\/[A-Za-z0-9]+$/);
+  await page.getByRole("button", { name: /Ouvrir l.éditeur/ }).click();
+  await page.waitForURL(/\/app\/cartes\/[A-Za-z0-9]{12,}$/);
   return page.url();
 }
 

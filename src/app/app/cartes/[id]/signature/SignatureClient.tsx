@@ -1,14 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildSignatureHtml, type SignatureInput, type SignatureTemplate } from "@/lib/signature/build";
+import { buildSignatureHtml, SIGNATURE_TEMPLATES, type SignatureInput, type SignatureTemplate } from "@/lib/signature/build";
 import { Button } from "@/components/ui";
-
-const TEMPLATES: { id: SignatureTemplate; label: string }[] = [
-  { id: "classic", label: "Classique" },
-  { id: "banner", label: "Barre colorée" },
-  { id: "compact", label: "Compacte" },
-];
 
 export function SignatureClient({ input }: { input: SignatureInput }) {
   const [template, setTemplate] = useState<SignatureTemplate>("classic");
@@ -66,7 +60,7 @@ export function SignatureClient({ input }: { input: SignatureInput }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold">Style :</span>
-        {TEMPLATES.map((t) => (
+        {SIGNATURE_TEMPLATES.map((t) => (
           <button
             key={t.id}
             type="button"

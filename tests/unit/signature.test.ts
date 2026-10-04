@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSignatureHtml, signatureInputFromDocument, type SignatureInput } from "@/lib/signature/build";
+import { buildSignatureHtml, SIGNATURE_TEMPLATES, signatureInputFromDocument, type SignatureInput } from "@/lib/signature/build";
 import { emptyDocument } from "@/lib/cards/defaults";
 
 const base: SignatureInput = {
@@ -26,13 +26,22 @@ describe("signature email", () => {
     expect(html).toContain("&lt;img");
   });
 
-  it("propose trois styles distincts", () => {
-    const c = buildSignatureHtml(base, "classic");
-    const b = buildSignatureHtml(base, "banner");
-    const k = buildSignatureHtml(base, "compact");
-    expect(b).toContain("border-left:3px solid #0047BB");
-    expect(c).not.toBe(b);
-    expect(k).not.toBe(c);
+  it("propose plusieurs styles distincts", () => {
+    const html = SIGNATURE_TEMPLATES.map((t) => buildSignatureHtml(base, t.id));
+    // Tous les styles produisent un HTML différent les uns des autres.
+    expect(new Set(html).size).toBe(SIGNATURE_TEMPLATES.length);
+    // La barre colorée utilise bien la couleur de marque, avec une colonne d'espacement.
+    const banner = buildSignatureHtml(base, "banner");
+    expect(banner).toContain("background:#0047BB");
+    expect(banner).toContain("width:16px"); // espace entre la barre et le texte
+    // L'encadré a une bordure.
+    expect(buildSignatureHtml(base, "boxed")).toContain("border:1px solid");
+  });
+
+  it("options logo en bannière et mini QR", () => {
+    const withBoth = buildSignatureHtml({ ...base, logoUrl: "https://ex.test/m/logo", qrUrl: "https://ex.test/r/tok/qr" }, "classic", { logoBanner: true, qr: true });
+    expect(withBoth).toContain("https://ex.test/m/logo");
+    expect(withBoth).toContain("https://ex.test/r/tok/qr");
   });
 
   it("extrait les champs d'une carte (bloc coordonnées, photo visible)", () => {
