@@ -13,6 +13,7 @@ export const BLOCK_LIBRARY: { type: BlockType; label: string; description: strin
   { type: "documents", label: "Documents PDF", description: "Plaquette, tarifs, fiche produit" },
   { type: "appointment", label: "Prise de rendez-vous", description: "Lien vers votre outil de réservation" },
   { type: "reviews", label: "Avis clients", description: "Liens vers votre fiche d'avis (Google…)" },
+  { type: "map", label: "Zone d'intervention", description: "Secteur desservi + carte (villes, rayon)" },
   { type: "hours", label: "Horaires", description: "Jours et heures d'ouverture" },
   { type: "services", label: "Services", description: "Liste de prestations" },
   { type: "leadForm", label: "Formulaire de contact", description: "Recevez des demandes de prospects" },
@@ -58,6 +59,8 @@ export function newBlock(type: BlockType): CardBlock {
       };
     case "services":
       return { ...base, type, title: "Services", items: [] };
+    case "map":
+      return { ...base, type, title: "Zone d'intervention", intro: "", zones: [], address: "", lat: null, lon: null, radiusKm: 20 };
     case "leadForm":
       return {
         ...base,

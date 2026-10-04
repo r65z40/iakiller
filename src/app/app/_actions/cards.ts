@@ -106,6 +106,17 @@ export async function setQrStyleAction(cardId: string, style: { dark: string; lo
   });
 }
 
+export async function geocodeAddressAction(address: unknown) {
+  return run(async () => {
+    await requireOrgAction();
+    if (typeof address !== "string") throw new DomainError("invalid", "Adresse invalide.");
+    const { geocode } = await import("@/lib/geo/geocode");
+    const r = await geocode(address);
+    if (!r) throw new DomainError("invalid", "Adresse introuvable. Précisez la ville (et le pays).");
+    return r;
+  });
+}
+
 export async function setQrVariantsAction(cardId: string, variants: { label: string }[]) {
   return run(async () => {
     const { setCardQrVariants } = await import("@/lib/cards/qr");
