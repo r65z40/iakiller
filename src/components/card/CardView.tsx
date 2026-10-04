@@ -773,6 +773,32 @@ function Block(props: {
       );
     }
 
+    case "map": {
+      const located = block.lat !== null && block.lon !== null;
+      const showImage = located && mode === "public" && !!props.publicToken;
+      return (
+        <Section>
+          <SectionTitle>{block.title}</SectionTitle>
+          {block.intro && <p className="text-[14px] text-[var(--c-muted)]">{block.intro}</p>}
+          {showImage && (
+            <a href={`https://www.openstreetmap.org/?mlat=${block.lat}&mlon=${block.lon}#map=11/${block.lat}/${block.lon}`} target="_blank" rel="noopener noreferrer" className="mt-3 block overflow-hidden rounded-[var(--radius)] ring-1 ring-[var(--c-line)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/public/zone-map?token=${props.publicToken}`} alt={`Zone d'intervention autour de ${block.address || "l'adresse"}`} width={640} height={360} loading="lazy" className="block aspect-video w-full object-cover" />
+            </a>
+          )}
+          {located && mode !== "public" && <p className="mt-3 rounded-[var(--radius)] bg-[var(--c-soft)] p-3 text-[13px] text-[var(--c-muted)]">La carte s&apos;affichera ici sur la page publique une fois la carte publiée.</p>}
+          {block.zones.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {block.zones.map((z, i) => (
+                <li key={i} className="rounded-full bg-[var(--c-soft)] px-3 py-1 text-[13px] font-medium text-[var(--c-text)]">{z}</li>
+              ))}
+            </ul>
+          )}
+          {block.radiusKm > 0 && <p className="mt-2 text-[12px] text-[var(--c-muted)]">Rayon d&apos;intervention : environ {block.radiusKm} km{block.address ? ` autour de ${block.address}` : ""}.</p>}
+        </Section>
+      );
+    }
+
     case "leadForm":
       return (
         <Section>

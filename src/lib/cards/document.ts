@@ -189,6 +189,21 @@ export const blockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     ...blockBase,
+    type: z.literal("map"),
+    title: short(60),
+    intro: short(300),
+    /** Villes / départements desservis, affichés en pastilles. */
+    zones: z.array(short(60)).max(30).default([]),
+    /** Adresse ou ville centrale saisie (sert au géocodage). */
+    address: short(200),
+    /** Coordonnées géocodées à l'enregistrement (null tant qu'elles ne le sont pas). */
+    lat: z.number().min(-90).max(90).nullable().default(null),
+    lon: z.number().min(-180).max(180).nullable().default(null),
+    /** Rayon d'intervention en km (0 = pas de cercle). */
+    radiusKm: z.number().int().min(0).max(300).default(20),
+  }),
+  z.object({
+    ...blockBase,
     type: z.literal("hours"),
     title: short(60),
     rows: z.array(z.object({ id, day: short(40), value: short(80) })).max(14),
@@ -260,6 +275,9 @@ export const documentSchema = z
     });
     if (doc.blocks.filter((b) => b.type === "leadForm").length > 1) {
       ctx.addIssue({ code: "custom", path: ["blocks"], message: "Un seul formulaire de contact par carte" });
+    }
+    if (doc.blocks.filter((b) => b.type === "map").length > 1) {
+      ctx.addIssue({ code: "custom", path: ["blocks"], message: "Un seul bloc « Zone d'intervention » par carte" });
     }
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useState, useTransition, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Lock, Plus, Trash2 } from "lucide-react";
 import { CONTACT_KINDS, FONTS, LINK_ICONS, SOCIAL_NETWORKS } from "@/lib/cards/constants";
 import type { CardBanner, CardBlock, CardIdentity, CardTheme, ContactKind } from "@/lib/cards/document";
@@ -9,6 +9,7 @@ import { blockId } from "@/lib/cards/client-ids";
 import { parseVideoUrl, normalizeWebUrl, normalizePhone, isValidEmail } from "@/lib/validation/urls";
 import { inputClass } from "@/components/ui";
 import { MediaPicker, type LibraryItem } from "./MediaPicker";
+import { geocodeAddressAction } from "@/app/app/_actions/cards";
 
 // ---------------------------------------------------------------------------
 // Champs de base
@@ -404,6 +405,8 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
           />
         </div>
       );
+    case "map":
+      return <MapFields block={block} onChange={onChange} />;
     case "leadForm": {
       const modes = [{ value: "off" as const, label: "Non demandé" }, { value: "optional" as const, label: "Facultatif" }, { value: "required" as const, label: "Obligatoire" }];
       const typeOptions = [
@@ -464,6 +467,44 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
       );
     }
   }
+}
+
+type MapBlock = Extract<CardBlock, { type: "map" }>;
+
+function MapFields({ block, onChange }: { block: MapBlock; onChange: (b: CardBlock) => void }) {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const locate = () => {
+    if (!block.address.trim()) { setMsg({ ok: false, text: "Saisissez d'abord une adresse ou une ville." }); return; }
+    setMsg(null);
+    start(async () => {
+      const r = await geocodeAddressAction(block.address);
+      if (r.ok) { onChange({ ...block, lat: r.data.lat, lon: r.data.lon }); setMsg({ ok: true, text: `Localisé : ${r.data.label}` }); }
+      else setMsg({ ok: false, text: r.error });
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <TextInput label="Titre" value={block.title} onChange={(v) => onChange({ ...block, title: v })} maxLength={60} />
+      <TextInput label="Introduction" value={block.intro} onChange={(v) => onChange({ ...block, intro: v })} maxLength={300} multiline rows={2} placeholder="Ex. J'interviens dans un rayon de 20 km autour de Lyon." />
+      <TextInput label="Villes / départements desservis (un par ligne)" value={block.zones.join("\n")} onChange={(v) => onChange({ ...block, zones: v.split("\n").map((z) => z.trim()).filter(Boolean).slice(0, 30) })} maxLength={1200} multiline rows={3} placeholder={"Lyon\nVilleurbanne\nRhône (69)"} />
+      <div>
+        <TextInput label="Adresse ou ville centrale (pour la carte)" value={block.address} onChange={(v) => onChange({ ...block, address: v, lat: null, lon: null })} maxLength={200} placeholder="12 rue de la République, Lyon" />
+        <div className="mt-2 flex items-center gap-2">
+          <button type="button" disabled={pending} className="min-h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-white disabled:opacity-60" onClick={locate}>{pending ? "Localisation…" : "Localiser sur la carte"}</button>
+          {block.lat !== null && block.lon !== null && <span className="text-xs font-semibold text-success">Carte activée ✓</span>}
+        </div>
+        {msg && <p role={msg.ok ? "status" : "alert"} className={`mt-1 text-xs font-semibold ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</p>}
+      </div>
+      <label className="block text-sm font-semibold">
+        Rayon d&apos;intervention : {block.radiusKm} km
+        <input type="range" min={0} max={150} step={5} value={block.radiusKm} onChange={(e) => onChange({ ...block, radiusKm: Number(e.target.value) })} className="mt-1 block w-full" />
+        <span className="text-xs font-normal text-muted">0 = aucun cercle affiché. La carte apparaît sur la page publique une fois l&apos;adresse localisée.</span>
+      </label>
+    </div>
+  );
 }
 
 function VideoUrlField({ current, onParsed }: { current: string; onParsed: (p: ReturnType<typeof parseVideoUrl>) => void }) {
