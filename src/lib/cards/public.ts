@@ -5,6 +5,7 @@ import { loadEntitlement } from "@/lib/billing/load";
 import { collectMediaIds, parseDocument, publicDocument, type CardDocument } from "./document";
 import { applyBrandLocks } from "@/lib/brand";
 import { getBrand } from "@/lib/brand-service";
+import type { QrVariant } from "./qr";
 
 export type PublicCardResult =
   | { kind: "ok"; organization: typeof schema.organization.$inferSelect; card: typeof schema.card.$inferSelect; document: CardDocument; versionId: string }
@@ -78,14 +79,18 @@ export async function resolvePublicCard(orgSlug: string, cardSlug: string): Prom
 export const resolvePublicCardForRequest = cache(resolvePublicCard);
 
 /**
- * Résout le jeton stable du QR code vers l'adresse courante de la carte.
- * `variantSlug` (paramètre `?c=` du QR) identifie l'origine du scan : s'il correspond à une
- * variante déclarée sur la carte, on renvoie son slug comme `campaign` pour le suivi statistique.
+ * Résout le jeton stable du QR code. Renvoie l'adresse courante de la carte, l'identifiant de la
+ * carte (pour le comptage des scans) et, si `variantSlug` (paramètre `?c=`) correspond à une
+ * variante déclarée, cette variante (slug + destination) pour un QR « intelligent ».
  */
 export async function resolvePublicToken(
   token: string,
   variantSlug?: string | null,
-): Promise<{ kind: "redirect"; path: string; campaign?: string } | { kind: "unavailable" } | { kind: "not_found" }> {
+): Promise<
+  | { kind: "redirect"; path: string; cardId: string; slug: string | null; variant: QrVariant | null }
+  | { kind: "unavailable" }
+  | { kind: "not_found" }
+> {
   if (!/^[A-Za-z0-9_-]{10,64}$/.test(token)) return { kind: "not_found" };
   const [row] = await db
     .select({ card: schema.card, org: schema.organization })
@@ -95,8 +100,8 @@ export async function resolvePublicToken(
   if (!row || row.org.deletedAt) return { kind: "not_found" };
   if (!(await isCardPubliclyAccessible(row.card))) return { kind: "unavailable" };
   const clean = typeof variantSlug === "string" && /^[a-z0-9-]{1,32}$/.test(variantSlug) ? variantSlug : null;
-  const campaign = clean && (row.card.qrVariants ?? []).some((v) => v.slug === clean) ? clean : undefined;
-  return { kind: "redirect", path: `/${row.org.slug}/${row.card.slug}`, campaign };
+  const variant = (clean && (row.card.qrVariants ?? []).find((v) => v.slug === clean)) || null;
+  return { kind: "redirect", path: `/${row.org.slug}/${row.card.slug}`, cardId: row.card.id, slug: variant ? variant.slug : null, variant: variant as QrVariant | null };
 }
 
 /**

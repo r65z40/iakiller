@@ -190,7 +190,7 @@ export function CardView(props: CardViewProps) {
           .map((block) => {
             const sel = selectable(block.id);
             return (
-              <div key={block.id} {...sel} className={`${sel.className ?? ""}`}>
+              <div key={block.id} id={block.id} style={{ scrollMarginTop: 16 }} {...sel} className={`${sel.className ?? ""}`}>
                 <Block
                   block={block}
                   doc={doc}

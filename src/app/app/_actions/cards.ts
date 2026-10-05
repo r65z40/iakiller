@@ -117,7 +117,7 @@ export async function geocodeAddressAction(address: unknown) {
   });
 }
 
-export async function setQrVariantsAction(cardId: string, variants: { label: string }[]) {
+export async function setQrVariantsAction(cardId: string, variants: unknown) {
   return run(async () => {
     const { setCardQrVariants } = await import("@/lib/cards/qr");
     return setCardQrVariants(await requireOrgAction(), cardId, variants);

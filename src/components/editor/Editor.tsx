@@ -14,7 +14,8 @@ import type { LibraryItem } from "./MediaPicker";
 import { useAutosave, type SaveStatus } from "./useAutosave";
 
 export interface EditorProps {
-  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean; qrStyle: { dark: string; logo: "none" | "card" | "brand" }; qrVariants: { slug: string; label: string }[] };
+  card: { id: string; title: string; status: string; slug: string; revision: number; publishedAt: string | null; disabled: boolean; hasUnpublishedChanges: boolean; qrStyle: { dark: string; logo: "none" | "card" | "brand" }; qrVariants: QrVariantT[] };
+  qrScans: Record<string, number>;
   initialDoc: CardDocument;
   library: LibraryItem[];
   locks: LockState;
@@ -266,7 +267,7 @@ export function Editor(props: EditorProps) {
     propsPanel = <ThemePanel theme={doc.theme} onChange={(theme) => commit({ ...doc, theme })} locks={props.locks} />;
   } else if (selection === "qr") {
     propsTitle = "QR code et partage";
-    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} initialVariants={props.card.qrVariants} />;
+    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} initialVariants={props.card.qrVariants} sections={doc.blocks.filter((b) => !b.hidden).map((b) => ({ id: b.id, label: blockLabel(b.type) }))} scans={props.qrScans} />;
   } else if (selection === "versions") {
     propsTitle = "Versions publiées";
     propsPanel = <VersionsPanel cardId={props.card.id} versions={props.versions} flush={autosave.flush} />;
@@ -381,27 +382,52 @@ function slugifyLabel(label: string): string {
   return label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
 }
 
-function QrVariantsPanel({ cardId, shortUrl, initial }: { cardId: string; shortUrl: string; initial: { slug: string; label: string }[] }) {
-  const [variants, setVariants] = useState(initial);
+type QrDest = { type: "card" | "section" | "url"; url?: string; section?: string };
+type QrVariantT = { slug: string; label: string; dest: QrDest; campaign?: { dest: QrDest; startsAt?: string; endsAt?: string } };
+
+function DestEditor({ value, sections, onChange }: { value: QrDest; sections: { id: string; label: string }[]; onChange: (d: QrDest) => void }) {
+  return (
+    <div className="space-y-2">
+      <select value={value.type} onChange={(e) => onChange({ type: e.target.value as QrDest["type"] })} className="min-h-9 w-full rounded-lg border border-line px-2 text-sm">
+        <option value="card">La carte numérique</option>
+        {sections.length > 0 && <option value="section">Un bloc de la carte</option>}
+        <option value="url">Une adresse externe</option>
+      </select>
+      {value.type === "url" && (
+        <input value={value.url ?? ""} onChange={(e) => onChange({ type: "url", url: e.target.value })} placeholder="https://exemple.fr/devis" maxLength={2048} className="min-h-9 w-full rounded-lg border border-line px-2 text-sm" aria-label="Adresse externe" />
+      )}
+      {value.type === "section" && (
+        <select value={value.section ?? ""} onChange={(e) => onChange({ type: "section", section: e.target.value })} className="min-h-9 w-full rounded-lg border border-line px-2 text-sm">
+          <option value="">Choisir un bloc…</option>
+          {sections.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+      )}
+    </div>
+  );
+}
+
+function QrVariantsPanel({ cardId, shortUrl, initial, sections, scans }: { cardId: string; shortUrl: string; initial: QrVariantT[]; sections: { id: string; label: string }[]; scans: Record<string, number> }) {
+  const [variants, setVariants] = useState<QrVariantT[]>(initial);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const save = (next: { slug: string; label: string }[]) =>
+  const save = (next: QrVariantT[]) =>
     start(async () => {
-      const r = await setQrVariantsAction(cardId, next.map((v) => ({ label: v.label })));
-      if (r.ok) { setVariants(r.data); setMsg({ ok: true, text: "Origines enregistrées." }); }
+      const r = await setQrVariantsAction(cardId, next);
+      if (r.ok) { setVariants(r.data as QrVariantT[]); setMsg({ ok: true, text: "QR enregistrés." }); }
       else setMsg({ ok: false, text: r.error });
     });
 
+  const patch = (slug: string, fn: (v: QrVariantT) => QrVariantT) => setVariants((vs) => vs.map((v) => (v.slug === slug ? fn(v) : v)));
   const add = (label: string) => {
     const clean = label.trim();
     if (!clean) return;
     const slug = slugifyLabel(clean);
     if (!slug || variants.some((v) => v.slug === slug)) { setMsg({ ok: false, text: "Nom vide ou déjà utilisé." }); return; }
-    if (variants.length >= 12) { setMsg({ ok: false, text: "12 origines maximum." }); return; }
-    save([...variants, { slug, label: clean }]);
+    if (variants.length >= 12) { setMsg({ ok: false, text: "12 QR maximum." }); return; }
+    save([...variants, { slug, label: clean, dest: { type: "card" } }]);
     setDraft("");
   };
 
@@ -409,40 +435,66 @@ function QrVariantsPanel({ cardId, shortUrl, initial }: { cardId: string; shortU
 
   return (
     <fieldset className="space-y-3 rounded-lg border border-line p-3">
-      <legend className="px-1 font-semibold">Origines (QR par support)</legend>
-      <p className="text-xs text-muted">Créez un QR différent par support (ex. « Carte de visite », « Véhicule », « Vitrine »). Chaque origine a son propre QR à télécharger, et vous saurez dans vos statistiques (onglet Campagnes) d&apos;où viennent les visiteurs.</p>
+      <legend className="px-1 font-semibold">QR intelligents (par support)</legend>
+      <p className="text-xs text-muted">Un QR par support (carte, véhicule, vitrine, flyer…). Chacun a son propre QR à imprimer, sa destination modifiable à tout moment (sans réimprimer), une campagne temporaire possible, et son nombre de scans.</p>
 
       {variants.length === 0 && (
-        <button type="button" disabled={pending} className={buttonClass("secondary", "sm")} onClick={() => save([{ slug: "carte-de-visite", label: "Carte de visite" }, { slug: "vehicule", label: "Véhicule" }])}>
+        <button type="button" disabled={pending} className={buttonClass("secondary", "sm")} onClick={() => save([{ slug: "carte-de-visite", label: "Carte de visite", dest: { type: "card" } }, { slug: "vehicule", label: "Véhicule", dest: { type: "card" } }])}>
           Ajouter les exemples (Carte de visite, Véhicule)
         </button>
       )}
 
-      <ul className="space-y-2">
-        {variants.map((v) => (
-          <li key={v.slug} className="rounded-lg border border-line p-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold">{v.label}</span>
-              <button type="button" disabled={pending} className="text-xs font-semibold text-danger hover:underline" onClick={() => save(variants.filter((x) => x.slug !== v.slug))}>Supprimer</button>
-            </div>
-            <div className="mt-1 flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/app/cartes/${cardId}/qr?format=svg&c=${v.slug}`} alt={`QR ${v.label}`} className="h-16 w-16 rounded bg-white p-1 ring-1 ring-line" />
-              <div className="min-w-0 flex-1">
-                <div className="flex gap-2">
-                  <a href={`/app/cartes/${cardId}/qr?format=png&download=1&c=${v.slug}`} className={buttonClass("primary", "sm")}>PNG</a>
-                  <a href={`/app/cartes/${cardId}/qr?format=svg&download=1&c=${v.slug}`} className={buttonClass("secondary", "sm")}>SVG</a>
-                  <button type="button" className={buttonClass("secondary", "sm")} onClick={async () => { await navigator.clipboard.writeText(linkFor(v.slug)); setCopied(v.slug); setTimeout(() => setCopied(null), 2000); }}>{copied === v.slug ? "Copié" : "Copier le lien"}</button>
-                </div>
-                <code className="mt-1 block truncate text-[11px] text-muted">{linkFor(v.slug)}</code>
+      <ul className="space-y-3">
+        {variants.map((v) => {
+          const hasCampaign = !!v.campaign;
+          return (
+            <li key={v.slug} className="rounded-lg border border-line p-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">{v.label} <span className="ml-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-normal text-muted">{scans[v.slug] ?? 0} scan(s)</span></span>
+                <button type="button" disabled={pending} className="text-xs font-semibold text-danger hover:underline" onClick={() => save(variants.filter((x) => x.slug !== v.slug))}>Supprimer</button>
               </div>
-            </div>
-          </li>
-        ))}
+              <div className="mt-2 flex items-start gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/app/cartes/${cardId}/qr?format=svg&c=${v.slug}`} alt={`QR ${v.label}`} className="h-16 w-16 shrink-0 rounded bg-white p-1 ring-1 ring-line" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`/app/cartes/${cardId}/qr?format=png&download=1&c=${v.slug}`} className={buttonClass("primary", "sm")}>PNG</a>
+                    <a href={`/app/cartes/${cardId}/qr?format=svg&download=1&c=${v.slug}`} className={buttonClass("secondary", "sm")}>SVG</a>
+                    <button type="button" className={buttonClass("secondary", "sm")} onClick={async () => { await navigator.clipboard.writeText(linkFor(v.slug)); setCopied(v.slug); setTimeout(() => setCopied(null), 2000); }}>{copied === v.slug ? "Copié" : "Lien"}</button>
+                  </div>
+                  <code className="block truncate text-[11px] text-muted">{linkFor(v.slug)}</code>
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <p className="text-xs font-semibold">Destination</p>
+                <DestEditor value={v.dest} sections={sections} onChange={(dest) => { patch(v.slug, (x) => ({ ...x, dest })); }} />
+              </div>
+
+              <label className="mt-2 flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" checked={hasCampaign} onChange={(e) => save(variants.map((x) => x.slug !== v.slug ? x : e.target.checked ? { ...x, campaign: { dest: { type: "url" }, startsAt: "", endsAt: "" } } : { ...x, campaign: undefined }))} />
+                Campagne temporaire (redirige ailleurs pendant une période, puis revient)
+              </label>
+              {v.campaign && (
+                <div className="mt-1 space-y-2 rounded-lg bg-surface p-2">
+                  <p className="text-[11px] font-semibold text-muted">Pendant la campagne, rediriger vers :</p>
+                  <DestEditor value={v.campaign.dest} sections={sections} onChange={(dest) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, dest } }))} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-[11px] font-semibold">Début<input type="datetime-local" value={v.campaign.startsAt ?? ""} onChange={(e) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, startsAt: e.target.value } }))} onBlur={() => save(variants)} className="mt-0.5 block w-full rounded border border-line px-1 text-xs" /></label>
+                    <label className="text-[11px] font-semibold">Fin<input type="datetime-local" value={v.campaign.endsAt ?? ""} onChange={(e) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, endsAt: e.target.value } }))} onBlur={() => save(variants)} className="mt-0.5 block w-full rounded border border-line px-1 text-xs" /></label>
+                  </div>
+                </div>
+              )}
+              <div className="mt-2">
+                <button type="button" disabled={pending} className={buttonClass("secondary", "sm")} onClick={() => save(variants)}>Enregistrer ce QR</button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="flex gap-2">
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} maxLength={40} placeholder="Nouvelle origine (ex. Flyer)" className="min-h-10 w-full rounded-lg border border-line px-2 text-sm" aria-label="Nom de l'origine" />
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} maxLength={40} placeholder="Nouveau QR (ex. Flyer)" className="min-h-10 w-full rounded-lg border border-line px-2 text-sm" aria-label="Nom du QR" />
         <button type="button" disabled={pending || !draft.trim()} className={buttonClass("secondary", "sm")} onClick={() => add(draft)}>Ajouter</button>
       </div>
       {msg && <p role={msg.ok ? "status" : "alert"} className={`text-xs font-semibold ${msg.ok ? "text-success" : "text-danger"}`}>{msg.text}</p>}
@@ -450,7 +502,7 @@ function QrVariantsPanel({ cardId, shortUrl, initial }: { cardId: string; shortU
   );
 }
 
-function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initialVariants }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" }; initialVariants: { slug: string; label: string }[] }) {
+function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initialVariants, sections, scans }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" }; initialVariants: QrVariantT[]; sections: { id: string; label: string }[]; scans: Record<string, number> }) {
   const [copied, setCopied] = useState(false);
   const [style, setStyle] = useState(initialStyle);
   const [version, setVersion] = useState(0);
@@ -491,7 +543,7 @@ function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initial
       </div>
       <p className="text-muted">Le QR code pointe vers un lien permanent ({shortUrl}). Il reste valable si vous changez l&apos;adresse de la carte, et affiche une page d&apos;indisponibilité si la carte est retirée ou si l&apos;abonnement prend fin.</p>
       {!published && <p className="font-semibold text-warning">La carte n&apos;est pas encore publiée : le QR mène pour l&apos;instant à une page d&apos;indisponibilité.</p>}
-      <QrVariantsPanel cardId={cardId} shortUrl={shortUrl} initial={initialVariants} />
+      <QrVariantsPanel cardId={cardId} shortUrl={shortUrl} initial={initialVariants} sections={sections} scans={scans} />
       <div>
         <p className="font-semibold">Adresse de la carte</p>
         <div className="mt-1 flex gap-2">

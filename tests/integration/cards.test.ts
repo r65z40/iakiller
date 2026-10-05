@@ -112,7 +112,7 @@ describe("adresses et QR code", () => {
     const newSlug = await renameCardSlug(actor, c.id, "nouveau-nom");
 
     const qr = await resolvePublicToken(card.publicToken);
-    expect(qr).toEqual({ kind: "redirect", path: `/${org.slug}/${newSlug}` });
+    expect(qr).toMatchObject({ kind: "redirect", path: `/${org.slug}/${newSlug}`, cardId: c.id, slug: null, variant: null });
 
     const old = await resolvePublicCard(org.slug, oldSlug);
     expect(old).toEqual({ kind: "redirect", path: `/${org.slug}/${newSlug}` });

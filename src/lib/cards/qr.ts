@@ -8,7 +8,7 @@ import { db, schema } from "@/lib/db";
 import { storage } from "@/lib/media/storage";
 import { DomainError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
-import { isHexColor } from "@/lib/validation/urls";
+import { isHexColor, normalizeWebUrl } from "@/lib/validation/urls";
 import { getCardForActor, type Actor } from "./service";
 
 /** URL stable encodée dans le QR code. Une variante ajoute `?c={slug}` pour tracer l'origine. */
@@ -17,14 +17,64 @@ export function qrTargetUrl(publicToken: string, variantSlug?: string | null) {
   return variantSlug ? `${base}?c=${encodeURIComponent(variantSlug)}` : base;
 }
 
-/** Variante de QR code (origine) : un libellé affiché et un slug technique court et stable. */
+/**
+ * Destination d'un QR « intelligent ».
+ * - card    : la carte numérique (comportement par défaut historique).
+ * - section : la carte, positionnée sur un bloc précis (ex. formulaire, galerie) via ancre.
+ * - url     : une adresse externe (http/https), modifiable sans réimprimer le QR.
+ */
+export type QrDestType = "card" | "section" | "url";
+export interface QrDest {
+  type: QrDestType;
+  /** Pour type "url" : adresse externe. */
+  url?: string;
+  /** Pour type "section" : identifiant du bloc cible sur la carte. */
+  section?: string;
+}
+
+/** Variante de QR code : libellé, slug stable, destination, et campagne temporaire optionnelle. */
 export interface QrVariant {
   slug: string;
   label: string;
+  /** Destination normale (hors campagne). */
+  dest: QrDest;
+  /** Campagne temporaire : remplace la destination pendant la fenêtre, puis retour automatique. */
+  campaign?: { dest: QrDest; startsAt?: string; endsAt?: string };
 }
 
 /** Nombre maximal de variantes par carte (au-delà, l'intérêt du suivi s'estompe). */
 export const MAX_QR_VARIANTS = 12;
+
+const SECTION_RE = /^[A-Za-z0-9_-]{4,40}$/;
+
+/** Valide une destination de QR (type + url http(s) ou identifiant de section). */
+function normalizeDest(raw: unknown): QrDest {
+  const r = (raw ?? {}) as { type?: unknown; url?: unknown; section?: unknown };
+  const type: QrDestType = r.type === "url" || r.type === "section" ? r.type : "card";
+  if (type === "url") {
+    const url = normalizeWebUrl(String(r.url ?? ""));
+    return url ? { type: "url", url } : { type: "card" };
+  }
+  if (type === "section") {
+    const section = String(r.section ?? "").trim();
+    return SECTION_RE.test(section) ? { type: "section", section } : { type: "card" };
+  }
+  return { type: "card" };
+}
+
+/** Destination active à l'instant donné : la campagne si on est dans sa fenêtre, sinon la destination normale. */
+export function activeQrDest(v: QrVariant, now = new Date()): QrDest {
+  const c = v.campaign;
+  if (c) {
+    const t = now.getTime();
+    const s = c.startsAt ? Date.parse(c.startsAt) : NaN;
+    const e = c.endsAt ? Date.parse(c.endsAt) : NaN;
+    const started = Number.isNaN(s) || t >= s;
+    const notEnded = Number.isNaN(e) || t <= e;
+    if (started && notEnded) return c.dest;
+  }
+  return v.dest;
+}
 
 /** Transforme un libellé en slug sûr (ascii minuscule, tirets), tronqué à 32 caractères. */
 export function slugifyVariant(label: string): string {
@@ -37,19 +87,33 @@ export function slugifyVariant(label: string): string {
     .slice(0, 32);
 }
 
-/** Valide/normalise une liste de variantes : libellés propres, slugs uniques, bornée. */
+const dateOrEmpty = (v: unknown): string | undefined => {
+  const s = String(v ?? "").trim().slice(0, 32);
+  if (!s || Number.isNaN(Date.parse(s))) return undefined;
+  return s;
+};
+
+/** Valide/normalise une liste de variantes : libellés propres, slugs uniques, destinations, bornée. */
 export function normalizeQrVariants(input: unknown): QrVariant[] {
   if (!Array.isArray(input)) return [];
   const out: QrVariant[] = [];
   const seen = new Set<string>();
   for (const raw of input) {
     if (!raw || typeof raw !== "object") continue;
-    const label = String((raw as { label?: unknown }).label ?? "").trim().slice(0, 40);
+    const o = raw as { label?: unknown; dest?: unknown; campaign?: unknown };
+    const label = String(o.label ?? "").trim().slice(0, 40);
     if (!label) continue;
     const slug = slugifyVariant(label);
     if (!slug || seen.has(slug)) continue;
     seen.add(slug);
-    out.push({ slug, label });
+    const variant: QrVariant = { slug, label, dest: normalizeDest(o.dest) };
+    const c = o.campaign as { dest?: unknown; startsAt?: unknown; endsAt?: unknown } | undefined;
+    if (c && typeof c === "object") {
+      const cDest = normalizeDest(c.dest);
+      // Une campagne n'a de sens que si elle redirige ailleurs que la carte simple.
+      if (cDest.type !== "card") variant.campaign = { dest: cDest, startsAt: dateOrEmpty(c.startsAt), endsAt: dateOrEmpty(c.endsAt) };
+    }
+    out.push(variant);
     if (out.length >= MAX_QR_VARIANTS) break;
   }
   return out;

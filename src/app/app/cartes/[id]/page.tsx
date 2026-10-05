@@ -6,7 +6,8 @@ import { listMedia } from "@/lib/media/service";
 import { db, schema } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { appUrl } from "@/lib/config";
-import { qrTargetUrl } from "@/lib/cards/qr";
+import { qrTargetUrl, normalizeQrVariants } from "@/lib/cards/qr";
+import { scansByVariant } from "@/lib/cards/qr-scan";
 import { parseDocument } from "@/lib/cards/document";
 import { emptyDocument } from "@/lib/cards/defaults";
 import { isLockable } from "@/lib/brand";
@@ -58,8 +59,9 @@ export default async function CardEditorPage({ params }: PageProps<"/app/cartes/
         disabled: !!card.disabledAt,
         hasUnpublishedChanges: !card.publishedAt || card.draftUpdatedAt > card.publishedAt,
         qrStyle: card.qrStyle ?? { dark: "#000000", logo: "none" },
-        qrVariants: card.qrVariants ?? [],
+        qrVariants: normalizeQrVariants(card.qrVariants ?? []),
       }}
+      qrScans={await scansByVariant(card.id)}
       initialDoc={doc}
       library={media.map((m) => ({ id: m.id, kind: m.kind as "image" | "document", url: `/api/media/${m.id}`, name: m.originalName, sizeBytes: m.sizeBytes, width: m.width, height: m.height }))}
       locks={{
