@@ -9,6 +9,7 @@ export const BLOCK_LIBRARY: { type: BlockType; label: string; description: strin
   { type: "links", label: "Liens", description: "Boutons avec titre, sous-titre et icône" },
   { type: "social", label: "Réseaux sociaux", description: "LinkedIn, Instagram, Facebook…" },
   { type: "gallery", label: "Galerie photo", description: "Images avec légendes facultatives" },
+  { type: "beforeAfter", label: "Avant / Après", description: "Comparaisons photo avant/après (curseur)" },
   { type: "video", label: "Vidéo", description: "YouTube ou Vimeo, chargée au clic" },
   { type: "documents", label: "Documents PDF", description: "Plaquette, tarifs, fiche produit" },
   { type: "appointment", label: "Prise de rendez-vous", description: "Lien vers votre outil de réservation" },
@@ -38,6 +39,8 @@ export function newBlock(type: BlockType): CardBlock {
       return { ...base, type, title: "Réseaux", items: [] };
     case "gallery":
       return { ...base, type, title: "En images", items: [] };
+    case "beforeAfter":
+      return { ...base, type, title: "Avant / Après", intro: "", items: [] };
     case "video":
       return { ...base, type, title: "Vidéo", provider: null, videoId: "" };
     case "documents":

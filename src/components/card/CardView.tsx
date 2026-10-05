@@ -647,6 +647,27 @@ function Block(props: {
       );
     }
 
+    case "beforeAfter": {
+      const items = block.items.filter((i) => media[i.beforeMediaId] && media[i.afterMediaId]);
+      if (!items.length && mode === "public") return null;
+      return (
+        <Section>
+          <SectionTitle>{block.title}</SectionTitle>
+          {block.intro && <p className="text-[14px] text-[var(--c-muted)]">{block.intro}</p>}
+          {!items.length && <p className="text-[13px] text-[var(--c-muted)]">Ajoutez une comparaison avant/après.</p>}
+          <ul className="space-y-5">
+            {items.map((item) => (
+              <li key={item.id}>
+                <BeforeAfterSlider before={media[item.beforeMediaId].url} after={media[item.afterMediaId].url} alt={item.caption || "Réalisation"} />
+                {item.caption && <p className="mt-1.5 text-[14px] font-bold">{item.caption}</p>}
+                {item.description && <p className="text-[13px] text-[var(--c-muted)]">{item.description}</p>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      );
+    }
+
     case "video":
       if (!block.provider || !block.videoId) {
         return mode === "preview" ? (
@@ -807,6 +828,33 @@ function Block(props: {
         </Section>
       );
   }
+}
+
+function BeforeAfterSlider({ before, after, alt }: { before: string; after: string; alt: string }) {
+  const [pos, setPos] = useState(50);
+  return (
+    <div className="relative w-full select-none overflow-hidden rounded-[var(--radius)]" style={{ aspectRatio: "4 / 3" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={after} alt={`${alt} — après`} draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={before} alt={`${alt} — avant`} draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} />
+      <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">Avant</span>
+      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">Après</span>
+      <div className="pointer-events-none absolute inset-y-0" style={{ left: `calc(${pos}% - 1px)` }}>
+        <div className="h-full w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.25)]" />
+        <div className="absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[var(--c-text)] shadow-md">⇆</div>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={pos}
+        onChange={(e) => setPos(Number(e.target.value))}
+        aria-label={`Comparer avant et après : ${alt}`}
+        className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+      />
+    </div>
+  );
 }
 
 function VideoEmbed({ provider, videoId, title, mode, onPlay }: { provider: "youtube" | "vimeo"; videoId: string; title: string; mode: "public" | "preview"; onPlay: () => void }) {
