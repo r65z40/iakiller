@@ -667,8 +667,18 @@ export const lead = pgTable(
     photoIds: jsonb("photo_ids").$type<string[]>(),
     /** Accord marketing distinct, facultatif, décoché par défaut. */
     marketingConsent: boolean("marketing_consent").notNull().default(false),
-    /** new | contacted | done */
+    /** Ancien statut (new | contacted | done), conservé pour compatibilité ; voir `stage`. */
     status: text("status").notNull().default("new"),
+    /** Étape du pipeline CRM (nouveau | a_contacter | contacte | devis_a_preparer | devis_envoye | a_relancer | gagne | perdu). */
+    stage: text("stage").notNull().default("nouveau"),
+    /** Source : qr | campaign | direct | manual | import. */
+    source: text("source").notNull().default("direct"),
+    /** Précision de la source (ex. slug de la variante de QR, nom de campagne utm). */
+    sourceDetail: text("source_detail"),
+    /** Étiquettes libres. */
+    tags: jsonb("tags").$type<string[]>(),
+    /** Membre responsable du prospect. */
+    assignedToId: text("assigned_to_id").references(() => user.id, { onDelete: "set null" }),
     notes: text("notes"),
     /** Empreinte de déduplication (carte + email/téléphone + message). */
     dedupeHash: text("dedupe_hash").notNull(),
@@ -679,7 +689,40 @@ export const lead = pgTable(
     index("lead_org_time_idx").on(t.organizationId, t.createdAt),
     index("lead_dedupe_idx").on(t.dedupeHash, t.createdAt),
     index("lead_card_time_idx").on(t.cardId, t.createdAt),
+    index("lead_org_stage_idx").on(t.organizationId, t.stage),
   ],
+);
+
+/** Tâches / rappels rattachés à un prospect (CRM). */
+export const leadTask = pgTable(
+  "lead_task",
+  {
+    id: text("id").primaryKey(),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    dueAt: ts("due_at"),
+    doneAt: ts("done_at"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_task_lead_idx").on(t.leadId), index("lead_task_org_due_idx").on(t.organizationId, t.dueAt)],
+);
+
+/** Historique des actions sur un prospect (changement d'étape, note, tâche…). */
+export const leadActivity = pgTable(
+  "lead_activity",
+  {
+    id: text("id").primaryKey(),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    /** stage | note | task | assign | created */
+    kind: text("kind").notNull(),
+    text: text("text").notNull().default(""),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_activity_lead_idx").on(t.leadId, t.createdAt)],
 );
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { acceptInvitation, inviteMember, removeMember } from "@/lib/orgs/members";
 import { createCard, getCardForActor, publishCard, saveDraft, setCardAssignees } from "@/lib/cards/service";
-import { csvCell, listLeads, submitLead, toCsv } from "@/lib/leads/service";
+import { addLeadTask, csvCell, deleteLeadTask, exportLeadsCsv, listLeadActivity, listLeadTasks, listLeads, setLeadTaskDone, submitLead, toCsv, updateLead } from "@/lib/leads/service";
 import { recordEvent } from "@/lib/analytics/service";
 import { totals } from "@/lib/analytics/queries";
 import { resolvePublicCard } from "@/lib/cards/public";
@@ -133,6 +133,104 @@ describe("prospects", () => {
     expect(csvCell("+33 6")).toBe("\"'+33 6\"");
     expect(csvCell("@SUM(A1)")).toBe("\"'@SUM(A1)\"");
     expect(toCsv(["a"], [["-1"]])).toContain("\"'-1\"");
+  });
+});
+
+describe("CRM — pipeline, source, tags, responsable, tâches", () => {
+  beforeEach(async () => {
+    await resetDb();
+    resetRateLimits();
+  });
+
+  const tokenAgo = (cardId: string, ms = 5000) => leadFormToken(cardId, Date.now() - ms);
+
+  async function oneLead(actor: Parameters<typeof createCard>[0], extra: Record<string, unknown> = {}) {
+    const card = await publishedCardWithForm(actor);
+    await submitLead(
+      { token: card.publicToken, formToken: tokenAgo(card.id), name: "Paul", email: "paul@exemple.test", message: "Bonjour", ...extra },
+      { ipKey: `ip-${Math.random()}` },
+    );
+    const [{ lead }] = await listLeads(actor);
+    return lead;
+  }
+
+  it("capture la source QR et sa précision, étape initiale « nouveau »", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor, { source: "qr", utmCampaign: "vitrine" });
+    expect(lead.source).toBe("qr");
+    expect(lead.sourceDetail).toBe("vitrine");
+    expect(lead.stage).toBe("nouveau");
+    const acts = await listLeadActivity(actor, lead.id);
+    expect(acts.some((a) => a.activity.kind === "created")).toBe(true);
+  });
+
+  it("ramène une source inconnue à « direct »", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor, { source: "pirate" });
+    expect(lead.source).toBe("direct");
+  });
+
+  it("déplace l'étape, trace l'historique et refuse une étape invalide", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor);
+    await updateLead(actor, lead.id, { stage: "devis_envoye" });
+    const [{ lead: after }] = await listLeads(actor);
+    expect(after.stage).toBe("devis_envoye");
+    const acts = await listLeadActivity(actor, lead.id);
+    expect(acts.some((a) => a.activity.kind === "stage")).toBe(true);
+    await expect(updateLead(actor, lead.id, { stage: "n_importe_quoi" })).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("filtre par étape", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor);
+    await updateLead(actor, lead.id, { stage: "gagne" });
+    expect(await listLeads(actor, { stage: "gagne" })).toHaveLength(1);
+    expect(await listLeads(actor, { stage: "nouveau" })).toHaveLength(0);
+  });
+
+  it("nettoie et déduplique les étiquettes", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor);
+    await updateLead(actor, lead.id, { tags: ["  VIP ", "vip", "urgent", "VIP"] });
+    const [{ lead: after }] = await listLeads(actor);
+    expect(after.tags).toEqual(["VIP", "vip", "urgent"]);
+  });
+
+  it("n'accepte comme responsable qu'un membre de l'organisation", async () => {
+    const a = await createOrgWithOwner("Org A");
+    const b = await createOrgWithOwner("Org B");
+    const lead = await oneLead(a.actor);
+    await expect(updateLead(a.actor, lead.id, { assignedToId: b.actor.user.id })).rejects.toMatchObject({ code: "invalid" });
+    await updateLead(a.actor, lead.id, { assignedToId: a.actor.user.id });
+    const [row] = await listLeads(a.actor);
+    expect(row.lead.assignedToId).toBe(a.actor.user.id);
+    expect(row.assigneeName).toBeTruthy();
+  });
+
+  it("gère les tâches : ajout, fait, suppression, scopées à l'organisation", async () => {
+    const a = await createOrgWithOwner("Org A");
+    const b = await createOrgWithOwner("Org B");
+    const lead = await oneLead(a.actor);
+    const taskId = await addLeadTask(a.actor, lead.id, { title: "Rappeler Paul" });
+    expect(await listLeadTasks(a.actor, lead.id)).toHaveLength(1);
+    await expect(listLeadTasks(b.actor, lead.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(setLeadTaskDone(b.actor, taskId, true)).rejects.toMatchObject({ code: "not_found" });
+    await setLeadTaskDone(a.actor, taskId, true);
+    const [t] = await listLeadTasks(a.actor, lead.id);
+    expect(t.doneAt).not.toBeNull();
+    await deleteLeadTask(a.actor, taskId);
+    expect(await listLeadTasks(a.actor, lead.id)).toHaveLength(0);
+  });
+
+  it("l'export CSV contient les colonnes CRM", async () => {
+    const { actor } = await createOrgWithOwner();
+    const lead = await oneLead(actor, { source: "qr", utmCampaign: "flyer" });
+    await updateLead(actor, lead.id, { stage: "gagne", assignedToId: actor.user.id });
+    const csv = await exportLeadsCsv(actor);
+    expect(csv).toContain("Étape");
+    expect(csv).toContain("Gagné");
+    expect(csv).toContain("qr (flyer)");
   });
 });
 

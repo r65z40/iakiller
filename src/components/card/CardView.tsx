@@ -204,6 +204,8 @@ export function CardView(props: CardViewProps) {
                   wallet={props.wallet}
                   publicToken={props.publicToken}
                   leadFormToken={props.leadFormToken}
+                  leadSource={props.analytics?.source}
+                  leadUtmCampaign={props.analytics?.utm?.campaign}
                   getViewId={() => (analyticsActive ? viewId.current || null : null)}
                 />
               </div>
@@ -465,6 +467,8 @@ function Block(props: {
   publicToken?: string;
   leadFormToken?: string;
   getViewId?: () => string | null;
+  leadSource?: string;
+  leadUtmCampaign?: string;
 }) {
   const { block, doc, track, mode, media } = props;
   const theme = doc.theme;
@@ -824,7 +828,7 @@ function Block(props: {
       return (
         <Section>
           <SectionTitle>{block.title}</SectionTitle>
-          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} getViewId={props.getViewId} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
+          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} getViewId={props.getViewId} source={props.leadSource} utmCampaign={props.leadUtmCampaign} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
         </Section>
       );
   }
@@ -879,7 +883,7 @@ function VideoEmbed({ provider, videoId, title, mode, onPlay }: { provider: "you
 
 type LeadBlock = Extract<CardBlock, { type: "leadForm" }>;
 
-function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null }) {
+function LeadForm({ block, mode, publicToken, formToken, company, getViewId, source, utmCampaign }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null; source?: string; utmCampaign?: string }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
@@ -907,6 +911,8 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
     const body: Record<string, unknown> = { token: publicToken, formToken, viewId: getViewId?.() ?? null };
     fd.forEach((v, k) => (body[k] = typeof v === "string" ? v : ""));
     body.marketingConsent = fd.get("marketingConsent") === "on";
+    if (source) body.source = source;
+    if (utmCampaign) body.utmCampaign = utmCampaign;
     if (block.allowPhotos && photos.length) body.photoIds = photos.map((p) => p.id);
     try {
       const res = await fetch("/api/public/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });

@@ -13,6 +13,7 @@ import { parseDocument } from "@/lib/cards/document";
 import { sendEmail } from "@/lib/email/send";
 import { templates } from "@/lib/email/templates";
 import type { Actor } from "@/lib/cards/service";
+import { STAGE_IDS, STAGE_LABELS } from "./crm";
 
 export interface LeadInput {
   token?: unknown;
@@ -106,6 +107,11 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     }
   }
 
+  // Source précise : qr / campagne / direct, avec le détail (slug de variante de QR ou campagne utm).
+  const rawSource = typeof input.source === "string" ? input.source : "direct";
+  const source = rawSource === "qr" ? "qr" : rawSource === "campaign" ? "campaign" : "direct";
+  const sourceDetail = str(input.utmCampaign, 60) || null;
+
   const id = newId();
   await db.insert(schema.lead).values({
     id,
@@ -118,9 +124,12 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     message: values.message || null,
     extra: extra.length ? extra : null,
     photoIds: photoIds.length ? photoIds : null,
+    source,
+    sourceDetail,
     marketingConsent: input.marketingConsent === true,
     dedupeHash,
   });
+  await db.insert(schema.leadActivity).values({ id: newId(), leadId: id, organizationId: card.organizationId, kind: "created", text: "Demande reçue", actorId: null });
 
   const assignees = await db
     .select({ email: schema.user.email })
@@ -175,33 +184,140 @@ async function leadScope(actor: Actor) {
   return and(...conditions);
 }
 
-export async function listLeads(actor: Actor, opts: { status?: string; cardId?: string; limit?: number; offset?: number } = {}) {
+export async function listLeads(actor: Actor, opts: { stage?: string; cardId?: string; limit?: number; offset?: number } = {}) {
   const scope = await leadScope(actor);
   if (!scope) return [];
   const conditions = [scope];
-  if (opts.status && ["new", "contacted", "done"].includes(opts.status)) conditions.push(eq(schema.lead.status, opts.status));
+  if (opts.stage && STAGE_IDS.includes(opts.stage)) conditions.push(eq(schema.lead.stage, opts.stage));
   if (opts.cardId) conditions.push(eq(schema.lead.cardId, opts.cardId));
   return db
-    .select({ lead: schema.lead, cardTitle: schema.card.title })
+    .select({ lead: schema.lead, cardTitle: schema.card.title, assigneeName: schema.user.name })
     .from(schema.lead)
     .leftJoin(schema.card, eq(schema.card.id, schema.lead.cardId))
+    .leftJoin(schema.user, eq(schema.user.id, schema.lead.assignedToId))
     .where(and(...conditions))
     .orderBy(desc(schema.lead.createdAt))
-    .limit(Math.min(opts.limit ?? 50, 200))
+    .limit(Math.min(opts.limit ?? 500, 1000))
     .offset(opts.offset ?? 0);
 }
 
-export async function updateLead(actor: Actor, leadId: string, patch: { status?: string; notes?: string }) {
+/** Une fiche prospect complète (scopée) avec le nom du responsable et le titre de la carte. */
+export async function getLeadForActor(actor: Actor, leadId: string) {
   const scope = await leadScope(actor);
   if (!scope) throw new DomainError("not_found", "Prospect introuvable");
+  const [row] = await db
+    .select({ lead: schema.lead, cardTitle: schema.card.title, assigneeName: schema.user.name })
+    .from(schema.lead)
+    .leftJoin(schema.card, eq(schema.card.id, schema.lead.cardId))
+    .leftJoin(schema.user, eq(schema.user.id, schema.lead.assignedToId))
+    .where(and(eq(schema.lead.id, leadId), scope));
+  if (!row) throw new DomainError("not_found", "Prospect introuvable");
+  return row;
+}
+
+/** Membres pouvant être désignés responsables d'un prospect (réservé aux gestionnaires). */
+export async function listAssignableMembers(actor: Actor) {
+  if (!can(actor, "leads.viewAll")) return [];
+  return db
+    .select({ id: schema.user.id, name: schema.user.name })
+    .from(schema.membership)
+    .innerJoin(schema.user, eq(schema.user.id, schema.membership.userId))
+    .where(eq(schema.membership.organizationId, actor.organization.id))
+    .orderBy(schema.user.name);
+}
+
+export async function updateLead(
+  actor: Actor,
+  leadId: string,
+  patch: { stage?: string; notes?: string; tags?: string[]; assignedToId?: string | null },
+) {
+  const scope = await leadScope(actor);
+  if (!scope) throw new DomainError("not_found", "Prospect introuvable");
+  const [before] = await db.select().from(schema.lead).where(and(eq(schema.lead.id, leadId), scope));
+  if (!before) throw new DomainError("not_found", "Prospect introuvable");
+
   const set: Partial<typeof schema.lead.$inferInsert> = { updatedAt: new Date() };
-  if (patch.status !== undefined) {
-    if (!["new", "contacted", "done"].includes(patch.status)) throw new DomainError("invalid", "Statut invalide.");
-    set.status = patch.status;
+  const activities: { kind: string; text: string }[] = [];
+
+  if (patch.stage !== undefined) {
+    if (!STAGE_IDS.includes(patch.stage)) throw new DomainError("invalid", "Étape invalide.");
+    set.stage = patch.stage;
+    if (patch.stage !== before.stage) activities.push({ kind: "stage", text: `Étape : ${STAGE_LABELS[patch.stage] ?? patch.stage}` });
   }
   if (patch.notes !== undefined) set.notes = patch.notes.slice(0, 4000);
-  const updated = await db.update(schema.lead).set(set).where(and(eq(schema.lead.id, leadId), scope)).returning({ id: schema.lead.id });
-  if (updated.length === 0) throw new DomainError("not_found", "Prospect introuvable");
+  if (patch.tags !== undefined) {
+    set.tags = [...new Set(patch.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 20);
+  }
+  if (patch.assignedToId !== undefined) {
+    let assignedToId: string | null = null;
+    if (patch.assignedToId) {
+      const [m] = await db
+        .select({ id: schema.membership.userId, name: schema.user.name })
+        .from(schema.membership)
+        .innerJoin(schema.user, eq(schema.user.id, schema.membership.userId))
+        .where(and(eq(schema.membership.organizationId, actor.organization.id), eq(schema.membership.userId, patch.assignedToId)));
+      if (!m) throw new DomainError("invalid", "Responsable invalide.");
+      assignedToId = m.id;
+      if (assignedToId !== before.assignedToId) activities.push({ kind: "assign", text: `Responsable : ${m.name}` });
+    } else if (before.assignedToId) {
+      activities.push({ kind: "assign", text: "Responsable retiré" });
+    }
+    set.assignedToId = assignedToId;
+  }
+
+  await db.update(schema.lead).set(set).where(and(eq(schema.lead.id, leadId), scope));
+  for (const a of activities) {
+    await db.insert(schema.leadActivity).values({ id: newId(), leadId, organizationId: actor.organization.id, kind: a.kind, text: a.text, actorId: actor.user.id });
+  }
+}
+
+/** Historique d'un prospect (plus récent d'abord). */
+export async function listLeadActivity(actor: Actor, leadId: string) {
+  await getLeadForActor(actor, leadId); // contrôle d'accès
+  return db
+    .select({ activity: schema.leadActivity, actorName: schema.user.name })
+    .from(schema.leadActivity)
+    .leftJoin(schema.user, eq(schema.user.id, schema.leadActivity.actorId))
+    .where(eq(schema.leadActivity.leadId, leadId))
+    .orderBy(desc(schema.leadActivity.createdAt))
+    .limit(100);
+}
+
+export async function listLeadTasks(actor: Actor, leadId: string) {
+  await getLeadForActor(actor, leadId);
+  return db.select().from(schema.leadTask).where(eq(schema.leadTask.leadId, leadId)).orderBy(schema.leadTask.doneAt, schema.leadTask.dueAt);
+}
+
+export async function addLeadTask(actor: Actor, leadId: string, input: { title: string; dueAt?: string | null }) {
+  await getLeadForActor(actor, leadId);
+  const title = input.title.trim().slice(0, 200);
+  if (!title) throw new DomainError("invalid", "Donnez un intitulé à la tâche.");
+  const due = input.dueAt ? new Date(input.dueAt) : null;
+  if (due && Number.isNaN(due.getTime())) throw new DomainError("invalid", "Échéance invalide.");
+  const id = newId();
+  await db.insert(schema.leadTask).values({ id, leadId, organizationId: actor.organization.id, title, dueAt: due, createdById: actor.user.id });
+  await db.insert(schema.leadActivity).values({ id: newId(), leadId, organizationId: actor.organization.id, kind: "task", text: `Tâche ajoutée : ${title}`, actorId: actor.user.id });
+  return id;
+}
+
+export async function setLeadTaskDone(actor: Actor, taskId: string, done: boolean) {
+  const [task] = await db
+    .select()
+    .from(schema.leadTask)
+    .where(and(eq(schema.leadTask.id, taskId), eq(schema.leadTask.organizationId, actor.organization.id)));
+  if (!task) throw new DomainError("not_found", "Tâche introuvable");
+  await getLeadForActor(actor, task.leadId); // contrôle d'accès au prospect
+  await db.update(schema.leadTask).set({ doneAt: done ? new Date() : null }).where(eq(schema.leadTask.id, taskId));
+}
+
+export async function deleteLeadTask(actor: Actor, taskId: string) {
+  const [task] = await db
+    .select()
+    .from(schema.leadTask)
+    .where(and(eq(schema.leadTask.id, taskId), eq(schema.leadTask.organizationId, actor.organization.id)));
+  if (!task) throw new DomainError("not_found", "Tâche introuvable");
+  await getLeadForActor(actor, task.leadId);
+  await db.delete(schema.leadTask).where(eq(schema.leadTask.id, taskId));
 }
 
 export async function deleteLead(actor: Actor, leadId: string) {
@@ -236,8 +352,8 @@ export async function exportLeadsCsv(actor: Actor) {
   }
   await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: "user", action: "lead.export", metadata: { count: all.length } });
   return toCsv(
-    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Champs sur mesure", "Photos", "Accord marketing", "Statut", "Notes"],
-    all.map(({ lead, cardTitle }) => [
+    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Champs sur mesure", "Photos", "Source", "Étape", "Responsable", "Accord marketing", "Notes"],
+    all.map(({ lead, cardTitle, assigneeName }) => [
       lead.createdAt.toISOString(),
       cardTitle ?? "",
       lead.name,
@@ -247,8 +363,10 @@ export async function exportLeadsCsv(actor: Actor) {
       lead.message,
       (lead.extra ?? []).map((e) => `${e.label}: ${e.value}`).join(" | "),
       (lead.photoIds ?? []).length,
+      lead.sourceDetail ? `${lead.source} (${lead.sourceDetail})` : lead.source,
+      STAGE_LABELS[lead.stage] ?? lead.stage,
+      assigneeName ?? "",
       lead.marketingConsent ? "oui" : "non",
-      lead.status,
       lead.notes,
     ]),
   );

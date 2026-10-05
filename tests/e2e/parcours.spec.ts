@@ -100,6 +100,9 @@ test("formulaire prospect public → visible dans l'espace", async ({ page, brow
 
   await page.goto("/app/prospects");
   await expect(page.getByText("Paul Visiteur")).toBeVisible();
+  // La carte du pipeline ouvre la fiche détaillée, où figure le message.
+  await page.getByRole("link", { name: /Paul Visiteur/ }).click();
+  await expect(page.getByRole("heading", { name: "Paul Visiteur" })).toBeVisible();
   await expect(page.getByText("Je souhaite un devis.")).toBeVisible();
 });
 

@@ -78,6 +78,13 @@
       "when": 1791193274107,
       "tag": "0010_qr_scan",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791209333805,
+      "tag": "0011_crm_pipeline",
+      "breakpoints": true
     }
   ]
 }
