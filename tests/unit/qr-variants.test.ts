@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slugifyVariant, normalizeQrVariants, qrTargetUrl, MAX_QR_VARIANTS } from "@/lib/cards/qr";
+import { slugifyVariant, normalizeQrVariants, qrTargetUrl, activeQrDest, MAX_QR_VARIANTS, type QrVariant } from "@/lib/cards/qr";
 
 describe("slugifyVariant", () => {
   it("normalise accents, espaces et casse", () => {
@@ -18,12 +18,27 @@ describe("slugifyVariant", () => {
 });
 
 describe("normalizeQrVariants", () => {
-  it("construit des variantes propres et dédoublonne les slugs", () => {
+  it("construit des variantes propres et dédoublonne les slugs (destination carte par défaut)", () => {
     const v = normalizeQrVariants([{ label: "Carte de visite" }, { label: "Véhicule" }, { label: "carte de visite" }]);
     expect(v).toEqual([
-      { slug: "carte-de-visite", label: "Carte de visite" },
-      { slug: "vehicule", label: "Véhicule" },
+      { slug: "carte-de-visite", label: "Carte de visite", dest: { type: "card" } },
+      { slug: "vehicule", label: "Véhicule", dest: { type: "card" } },
     ]);
+  });
+  it("valide les destinations (url http(s), section, sinon carte)", () => {
+    const [url] = normalizeQrVariants([{ label: "Véhicule", dest: { type: "url", url: "https://exemple.fr/devis" } }]);
+    expect(url.dest).toEqual({ type: "url", url: "https://exemple.fr/devis" });
+    const [bad] = normalizeQrVariants([{ label: "X", dest: { type: "url", url: "pas-une-url" } }]);
+    expect(bad.dest).toEqual({ type: "card" });
+    const [sec] = normalizeQrVariants([{ label: "Y", dest: { type: "section", section: "blk_contacts" } }]);
+    expect(sec.dest).toEqual({ type: "section", section: "blk_contacts" });
+  });
+  it("retient une campagne seulement si elle redirige ailleurs que la carte", () => {
+    const [v] = normalizeQrVariants([{ label: "Promo", dest: { type: "card" }, campaign: { dest: { type: "url", url: "https://promo.fr" }, startsAt: "2026-01-01T00:00", endsAt: "2026-01-31T23:59" } }]);
+    expect(v.campaign?.dest.type).toBe("url");
+    expect(v.campaign?.dest.url).toContain("promo.fr");
+    const [w] = normalizeQrVariants([{ label: "Rien", dest: { type: "card" }, campaign: { dest: { type: "card" } } }]);
+    expect(w.campaign).toBeUndefined();
   });
   it("ignore les entrées invalides", () => {
     expect(normalizeQrVariants([{ label: "" }, { label: "   " }, { label: "###" }, null, 42, "x"])).toEqual([]);
@@ -36,6 +51,23 @@ describe("normalizeQrVariants", () => {
   it("tronque les libellés trop longs", () => {
     const [only] = normalizeQrVariants([{ label: "x".repeat(80) }]);
     expect(only.label.length).toBe(40);
+  });
+});
+
+describe("activeQrDest (campagne temporaire)", () => {
+  const base: QrVariant = {
+    slug: "promo", label: "Promo", dest: { type: "card" },
+    campaign: { dest: { type: "url", url: "https://promo.fr" }, startsAt: "2026-02-01T00:00:00Z", endsAt: "2026-02-10T00:00:00Z" },
+  };
+  it("utilise la campagne pendant la fenêtre", () => {
+    expect(activeQrDest(base, new Date("2026-02-05T12:00:00Z")).type).toBe("url");
+  });
+  it("revient à la destination normale avant et après la fenêtre", () => {
+    expect(activeQrDest(base, new Date("2026-01-20T12:00:00Z")).type).toBe("card");
+    expect(activeQrDest(base, new Date("2026-02-20T12:00:00Z")).type).toBe("card");
+  });
+  it("sans campagne, renvoie la destination normale", () => {
+    expect(activeQrDest({ slug: "s", label: "S", dest: { type: "section", section: "blk_form" } }).type).toBe("section");
   });
 });
 

@@ -227,7 +227,14 @@ export const card = pgTable(
      * est tracé sous son libellé (ex. « Carte de visite », « Véhicule »). Permet de savoir
      * d'où viennent les visiteurs. `null`/[] = une seule origine générale.
      */
-    qrVariants: jsonb("qr_variants").$type<{ slug: string; label: string }[]>(),
+    qrVariants: jsonb("qr_variants").$type<
+      {
+        slug: string;
+        label: string;
+        dest: { type: "card" | "section" | "url"; url?: string; section?: string };
+        campaign?: { dest: { type: "card" | "section" | "url"; url?: string; section?: string }; startsAt?: string; endsAt?: string };
+      }[]
+    >(),
     /** Incrémenté à chaque sauvegarde du brouillon ; sert à détecter les conflits. */
     draftRevision: integer("draft_revision").notNull().default(1),
     draftUpdatedAt: ts("draft_updated_at").notNull().defaultNow(),
@@ -246,6 +253,24 @@ export const card = pgTable(
     uniqueIndex("card_org_slug_uq").on(t.organizationId, t.slug),
     index("card_org_status_idx").on(t.organizationId, t.status),
   ],
+);
+
+/**
+ * Comptage des scans de QR, agrégé par jour et par variante (slug, "" = QR général).
+ * Permet des statistiques « par QR » quelle que soit la destination (y compris URL externe),
+ * sans dépôt de cookie ni identifiant du visiteur.
+ */
+export const qrScan = pgTable(
+  "qr_scan",
+  {
+    cardId: text("card_id")
+      .notNull()
+      .references(() => card.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull().default(""),
+    day: text("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.cardId, t.slug, t.day] })],
 );
 
 export const cardAssignment = pgTable(
