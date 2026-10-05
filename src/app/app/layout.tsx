@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? [
         { href: "/app", label: "Tableau de bord" },
         { href: "/app/cartes", label: "Cartes" },
+        ...(can(ctx, "cards.create") ? [{ href: "/app/mini-sites", label: "Mini-sites" }] : []),
         { href: "/app/medias", label: "Médias" },
         ...(can(ctx, "brand.update") ? [{ href: "/app/marque", label: "Identité d'entreprise" }] : []),
         ...(can(ctx, "members.view") ? [{ href: "/app/membres", label: "Membres" }] : []),

@@ -357,6 +357,54 @@ export const slugRedirect = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Mini-sites (site vitrine multi-pages, même modèle de blocs que les cartes)
+// ---------------------------------------------------------------------------
+
+export const site = pgTable(
+  "site",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    publicToken: text("public_token").notNull().unique(),
+    status: text("status").notNull().default("draft"), // draft | published | archived
+    title: text("title").notNull(),
+    draft: jsonb("draft").$type<unknown>().notNull(),
+    draftRevision: integer("draft_revision").notNull().default(1),
+    draftUpdatedAt: ts("draft_updated_at").notNull().defaultNow(),
+    publishedVersionId: text("published_version_id"),
+    publishedAt: ts("published_at"),
+    /** Carte liée (facultatif) : prépare le partage de données carte ↔ mini-site. */
+    cardId: text("card_id").references(() => card.id, { onDelete: "set null" }),
+    disabledAt: ts("disabled_at"),
+    adminSuspendedAt: ts("admin_suspended_at"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("site_org_slug_uq").on(t.organizationId, t.slug), index("site_org_status_idx").on(t.organizationId, t.status)],
+);
+
+/** Version publiée immuable d'un mini-site (comme cardVersion pour les cartes). */
+export const siteVersion = pgTable(
+  "site_version",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id").notNull().references(() => site.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    document: jsonb("document").$type<unknown>().notNull(),
+    mediaIds: jsonb("media_ids").$type<string[]>().notNull().default([]),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("site_version_site_number_uq").on(t.siteId, t.number),
+    index("site_version_media_ids_gin").using("gin", t.mediaIds.op("jsonb_path_ops")),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Médias
 // ---------------------------------------------------------------------------
 

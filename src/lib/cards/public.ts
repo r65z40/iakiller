@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { loadEntitlement } from "@/lib/billing/load";
 import { collectMediaIds, parseDocument, publicDocument, type CardDocument } from "./document";
+import { collectSiteMediaIds, parseSiteDocument, publicSiteDocument } from "@/lib/sites/document";
 import { applyBrandLocks } from "@/lib/brand";
 import { getBrand } from "@/lib/brand-service";
 import type { QrVariant } from "./qr";
@@ -127,10 +128,32 @@ export async function isMediaPubliclyServable(mediaId: string): Promise<{ ok: bo
     );
   // Le média doit être référencé par la projection PUBLIQUE (un média de bloc masqué ou une
   // photo/logo masqués ne sont pas servis, même s'ils figurent dans mediaIds).
-  const referencedPublicly = candidates.some((c) => {
+  let referencedPublicly = candidates.some((c) => {
     const parsed = parseDocument(c.document);
     return parsed.success && collectMediaIds(publicDocument(parsed.data)).includes(mediaId);
   });
+  // Même règle pour les mini-sites : média servi s'il est référencé par la projection publique
+  // de la version publiée d'au moins un mini-site accessible de l'organisation.
+  if (!referencedPublicly) {
+    const siteCandidates = await db
+      .select({ document: schema.siteVersion.document })
+      .from(schema.site)
+      .innerJoin(schema.siteVersion, eq(schema.siteVersion.id, schema.site.publishedVersionId))
+      .where(
+        and(
+          eq(schema.site.organizationId, media.organizationId),
+          eq(schema.siteVersion.organizationId, media.organizationId),
+          eq(schema.site.status, "published"),
+          isNull(schema.site.disabledAt),
+          isNull(schema.site.adminSuspendedAt),
+          sql`${schema.siteVersion.mediaIds} @> ${JSON.stringify([mediaId])}::jsonb`,
+        ),
+      );
+    referencedPublicly = siteCandidates.some((c) => {
+      const parsed = parseSiteDocument(c.document);
+      return parsed.success && collectSiteMediaIds(publicSiteDocument(parsed.data)).includes(mediaId);
+    });
+  }
   if (!referencedPublicly) {
     // Logo de marque verrouillé : servi s'il existe au moins une carte accessible de l'organisation.
     const brand = await getBrand(media.organizationId);

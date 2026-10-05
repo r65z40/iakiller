@@ -92,6 +92,13 @@
       "when": 1791211682030,
       "tag": "0012_lead_automations",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791213051838,
+      "tag": "0013_mini_sites",
+      "breakpoints": true
     }
   ]
 }
