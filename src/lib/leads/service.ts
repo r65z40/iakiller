@@ -91,6 +91,21 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
   const [daily] = await db.select({ n: sql<number>`count(*)::int` }).from(schema.lead).where(and(eq(schema.lead.cardId, card.id), gte(schema.lead.createdAt, since)));
   if ((daily?.n ?? 0) >= PER_CARD_DAILY) return { ok: false, status: 429, error: "Le formulaire est momentanément indisponible. Réessayez plus tard." };
 
+  // Photos jointes : seulement si le formulaire les autorise, et on ne garde que des médias
+  // « lead » réellement rattachés à cette organisation (aucune référence arbitraire).
+  let photoIds: string[] = [];
+  if (form.allowPhotos && Array.isArray(input.photoIds)) {
+    const wanted = input.photoIds.filter((v): v is string => typeof v === "string" && /^[A-Za-z0-9_-]{4,40}$/.test(v)).slice(0, form.maxPhotos);
+    if (wanted.length) {
+      const rows = await db
+        .select({ id: schema.mediaAsset.id })
+        .from(schema.mediaAsset)
+        .where(and(inArray(schema.mediaAsset.id, wanted), eq(schema.mediaAsset.organizationId, card.organizationId), eq(schema.mediaAsset.source, "lead")));
+      const ok = new Set(rows.map((r) => r.id));
+      photoIds = wanted.filter((v) => ok.has(v));
+    }
+  }
+
   const id = newId();
   await db.insert(schema.lead).values({
     id,
@@ -102,6 +117,7 @@ export async function submitLead(input: LeadInput, meta: { ipKey: string; now?: 
     company: values.company || null,
     message: values.message || null,
     extra: extra.length ? extra : null,
+    photoIds: photoIds.length ? photoIds : null,
     marketingConsent: input.marketingConsent === true,
     dedupeHash,
   });
@@ -220,7 +236,7 @@ export async function exportLeadsCsv(actor: Actor) {
   }
   await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: "user", action: "lead.export", metadata: { count: all.length } });
   return toCsv(
-    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Champs sur mesure", "Accord marketing", "Statut", "Notes"],
+    ["Date (UTC)", "Carte", "Nom", "Email", "Téléphone", "Société", "Message", "Champs sur mesure", "Photos", "Accord marketing", "Statut", "Notes"],
     all.map(({ lead, cardTitle }) => [
       lead.createdAt.toISOString(),
       cardTitle ?? "",
@@ -230,6 +246,7 @@ export async function exportLeadsCsv(actor: Actor) {
       lead.company,
       lead.message,
       (lead.extra ?? []).map((e) => `${e.label}: ${e.value}`).join(" | "),
+      (lead.photoIds ?? []).length,
       lead.marketingConsent ? "oui" : "non",
       lead.status,
       lead.notes,

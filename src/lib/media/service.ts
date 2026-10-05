@@ -111,6 +111,46 @@ export async function uploadMedia(actor: Actor, file: { buffer: Buffer; name: st
   return { id, kind: processed.kind, mimeType: processed.mimeType, sizeBytes: processed.body.length, width: processed.width, height: processed.height, originalName };
 }
 
+/**
+ * Upload d'une photo jointe à une demande de contact, par un VISITEUR anonyme (aucun compte).
+ * Sécurité : type réel vérifié + ré-encodage (EXIF supprimé), quota de l'organisation respecté,
+ * marquée source="lead" (hors médiathèque, non supprimable via l'écran Médias). L'appelant doit
+ * avoir validé en amont que la carte est accessible et que son formulaire autorise les photos,
+ * et appliquer une limitation de débit.
+ */
+export async function uploadLeadPhoto(organizationId: string, buffer: Buffer): Promise<string> {
+  const processed = await processUpload(buffer, "image");
+  const id = newId();
+  const storageKey = `org/${organizationId}/lead/${newToken(16)}.webp`;
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${schema.organization} where id = ${organizationId} for update`);
+    const ent = await loadEntitlement(organizationId, tx);
+    if (!ent.publicAccess) throw new DomainError("entitlement", "Cette carte n'est plus disponible.");
+    const [used] = await tx
+      .select({ bytes: sql<number>`coalesce(sum(${schema.mediaAsset.sizeBytes}), 0)::bigint` })
+      .from(schema.mediaAsset)
+      .where(and(eq(schema.mediaAsset.organizationId, organizationId), isNull(schema.mediaAsset.deletedAt)));
+    if (Number(used?.bytes ?? 0) + processed.body.length > ent.quotas.storageMb * 1024 * 1024) {
+      throw new DomainError("quota_exceeded", "Espace de stockage insuffisant pour recevoir la photo.");
+    }
+    await tx.insert(schema.mediaAsset).values({
+      id,
+      organizationId,
+      kind: "image",
+      mimeType: processed.mimeType,
+      storageKey,
+      originalName: "photo-prospect.webp",
+      sizeBytes: processed.body.length,
+      width: processed.width,
+      height: processed.height,
+      uploadedById: null,
+      source: "lead",
+    });
+    await storage().put(storageKey, processed.body, processed.mimeType);
+  });
+  return id;
+}
+
 /** Lecture privée d'un média : réservée aux membres de l'organisation propriétaire. */
 export async function getMediaForActor(actor: Actor, mediaId: string) {
   const [m] = await db
@@ -125,7 +165,7 @@ export async function listMedia(actor: Actor) {
   return db
     .select()
     .from(schema.mediaAsset)
-    .where(and(eq(schema.mediaAsset.organizationId, actor.organization.id), isNull(schema.mediaAsset.deletedAt)))
+    .where(and(eq(schema.mediaAsset.organizationId, actor.organization.id), isNull(schema.mediaAsset.deletedAt), isNull(schema.mediaAsset.source)))
     .orderBy(sql`${schema.mediaAsset.createdAt} desc`)
     .limit(300);
 }

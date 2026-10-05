@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Badge, buttonClass } from "@/components/ui";
 import { deleteLeadAction, updateLeadAction } from "../_actions/members";
 
-interface LeadView { id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; extra: { label: string; value: string }[]; status: string; notes: string; marketingConsent: boolean; createdAt: string; cardTitle: string }
+interface LeadView { id: string; name: string | null; email: string | null; phone: string | null; company: string | null; message: string | null; extra: { label: string; value: string }[]; photos: string[]; status: string; notes: string; marketingConsent: boolean; createdAt: string; cardTitle: string }
 
 export function LeadRow({ lead, canDelete }: { lead: LeadView; canDelete: boolean }) {
   const [pending, start] = useTransition();
@@ -41,6 +41,16 @@ export function LeadRow({ lead, canDelete }: { lead: LeadView; canDelete: boolea
         </dl>
       )}
       {lead.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-surface p-3 text-sm">{lead.message}</p>}
+      {lead.photos.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {lead.photos.map((id) => (
+            <a key={id} href={`/api/media/${id}`} target="_blank" rel="noopener noreferrer" className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/media/${id}`} alt="Photo jointe" className="h-20 w-20 rounded-lg object-cover ring-1 ring-line" />
+            </a>
+          ))}
+        </div>
+      )}
       <div className="mt-3">
         <label htmlFor={`notes-${lead.id}`} className="text-xs font-semibold text-muted">Notes privées</label>
         <textarea id={`notes-${lead.id}`} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={4000} className="mt-1 block w-full rounded-lg border border-line px-3 py-2 text-sm" />
