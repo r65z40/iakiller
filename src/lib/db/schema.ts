@@ -716,13 +716,50 @@ export const leadActivity = pgTable(
     id: text("id").primaryKey(),
     leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
     organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
-    /** stage | note | task | assign | created */
+    /** stage | note | task | assign | created | automation */
     kind: text("kind").notNull(),
     text: text("text").notNull().default(""),
     actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [index("lead_activity_lead_idx").on(t.leadId, t.createdAt)],
+);
+
+/** Règle de relance automatique (déclencheur → délai → action). */
+export const leadAutomation = pgTable(
+  "lead_automation",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    /** Déclencheur : stage_entered | no_activity */
+    trigger: text("trigger").notNull(),
+    /** Étape concernée (requise pour stage_entered ; filtre facultatif pour no_activity). */
+    triggerStage: text("trigger_stage"),
+    /** Délai, en heures, après l'évènement déclencheur. */
+    delayHours: integer("delay_hours").notNull().default(24),
+    /** Action : email | task */
+    action: text("action").notNull(),
+    emailSubject: text("email_subject"),
+    emailBody: text("email_body"),
+    taskTitle: text("task_title"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("lead_automation_org_idx").on(t.organizationId)],
+);
+
+/** Passage d'une règle sur un prospect : garantit qu'une relance ne se déclenche qu'une fois. */
+export const leadAutomationRun = pgTable(
+  "lead_automation_run",
+  {
+    automationId: text("automation_id").notNull().references(() => leadAutomation.id, { onDelete: "cascade" }),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    firedAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.automationId, t.leadId] }), index("lead_automation_run_lead_idx").on(t.leadId)],
 );
 
 // ---------------------------------------------------------------------------

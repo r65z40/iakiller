@@ -12,6 +12,7 @@ import { templates } from "@/lib/email/templates";
 import { analyticsConfig } from "@/lib/analytics/config";
 import { asReader, getStripe } from "@/lib/billing/stripe";
 import { reconcileCustomer } from "@/lib/billing/sync";
+import { runLeadAutomations } from "@/lib/leads/automations";
 
 /**
  * Tâches planifiées (à lancer toutes les 15 minutes : `npm run jobs`).
@@ -243,7 +244,12 @@ export async function backups(now = new Date()) {
   return result;
 }
 
-export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, applyRetention, cleanup, backups } as const;
+/** Relances automatiques du CRM (déclencheur → délai → action). Idempotentes. */
+export async function leadAutomations(now = new Date()) {
+  return runLeadAutomations(now);
+}
+
+export const JOBS = { trialNotifications, reconcileBilling, retryFailedEmails, rollupAnalytics, applyRetention, cleanup, backups, leadAutomations } as const;
 
 export async function runAllJobs(now = new Date()) {
   await getSettings(true);

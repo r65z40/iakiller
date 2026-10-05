@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can(ctx, "members.view") ? [{ href: "/app/membres", label: "Membres" }] : []),
         { href: "/app/statistiques", label: "Statistiques" },
         { href: "/app/prospects", label: "Prospects" },
+        ...(can(ctx, "leads.viewAll") ? [{ href: "/app/relances", label: "Relances auto" }] : []),
         ...(can(ctx, "billing.view") ? [{ href: "/app/abonnement", label: "Abonnement et factures" }] : []),
         ...(can(ctx, "service.order") ? [{ href: "/app/prestations", label: "Création accompagnée" }] : []),
         { href: "/app/assistance", label: "Assistance" },

@@ -2,9 +2,11 @@ import { DownloadLink } from "@/components/ui/DownloadLink";
 import { requireOrgPage } from "@/lib/context";
 import { listLeads } from "@/lib/leads/service";
 import { sourceLabel } from "@/lib/leads/crm";
+import { can } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { Board, type BoardLead } from "./Board";
+import { NewLeadButton } from "./NewLeadButton";
 
 export default async function LeadsPage() {
   const ctx = await requireOrgPage();
@@ -26,7 +28,12 @@ export default async function LeadsPage() {
       <PageHeader
         title="Prospects"
         description="Votre pipeline commercial. Glissez une fiche d'une colonne à l'autre pour faire avancer la demande. Visible selon vos droits."
-        actions={<DownloadLink href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</DownloadLink>}
+        actions={
+          <div className="flex items-center gap-3">
+            {can(ctx, "leads.viewAll") && <NewLeadButton />}
+            <DownloadLink href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</DownloadLink>
+          </div>
+        }
       />
       {leads.length === 0 ? (
         <EmptyState title="Aucune demande">Ajoutez un bloc « Formulaire de contact » à une carte pour recevoir des demandes.</EmptyState>

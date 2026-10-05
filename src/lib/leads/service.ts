@@ -215,6 +215,39 @@ export async function getLeadForActor(actor: Actor, leadId: string) {
   return row;
 }
 
+/** Création manuelle d'un prospect (saisie à la main par un gestionnaire). */
+export async function createManualLead(
+  actor: Actor,
+  input: { name?: string; email?: string; phone?: string; company?: string; message?: string; stage?: string },
+) {
+  if (!can(actor, "leads.viewAll")) throw new DomainError("forbidden", "Action réservée aux gestionnaires.");
+  const name = str(input.name, 120);
+  const email = str(input.email, 254);
+  const phone = normalizePhone(str(input.phone, 40));
+  const company = str(input.company, 120);
+  const message = str(input.message, 2000);
+  if (!name && !email && !phone) throw new DomainError("invalid", "Renseignez au moins un nom, un email ou un téléphone.");
+  const stage = input.stage && STAGE_IDS.includes(input.stage) ? input.stage : "nouveau";
+  const id = newId();
+  await db.insert(schema.lead).values({
+    id,
+    organizationId: actor.organization.id,
+    cardId: null,
+    name: name || null,
+    email: email || null,
+    phone: phone || null,
+    company: company || null,
+    message: message || null,
+    marketingConsent: false,
+    stage,
+    source: "manual",
+    dedupeHash: `manual:${id}`,
+  });
+  await db.insert(schema.leadActivity).values({ id: newId(), leadId: id, organizationId: actor.organization.id, kind: "created", text: "Prospect créé manuellement", actorId: actor.user.id });
+  await audit({ organizationId: actor.organization.id, actorUserId: actor.user.id, actorType: "user", action: "lead.create", targetId: id });
+  return id;
+}
+
 /** Membres pouvant être désignés responsables d'un prospect (réservé aux gestionnaires). */
 export async function listAssignableMembers(actor: Actor) {
   if (!can(actor, "leads.viewAll")) return [];

@@ -5,6 +5,15 @@ import { requireOrgAction } from "@/lib/context";
 import { run } from "@/lib/action-result";
 import * as leads from "@/lib/leads/service";
 
+/** Crée un prospect à la main (saisie manuelle depuis le pipeline). */
+export async function createLeadAction(input: { name?: string; email?: string; phone?: string; company?: string; message?: string; stage?: string }) {
+  return run(async () => {
+    const id = await leads.createManualLead(await requireOrgAction(), input);
+    revalidatePath("/app/prospects");
+    return id;
+  });
+}
+
 /** Déplace un prospect dans une autre étape du pipeline (drag & drop du Kanban). */
 export async function moveLeadStageAction(leadId: string, stage: string) {
   return run(async () => {
