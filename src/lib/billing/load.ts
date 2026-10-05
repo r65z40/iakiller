@@ -41,6 +41,7 @@ export async function loadEntitlement(organizationId: string, client: DB | Tx = 
     pastDueSince: sub.pastDueSince,
     quotas: plan ? { cards: plan.cardQuota, storageMb: plan.storageQuotaMb, members: plan.memberQuota } : null,
     planName: plan?.name ?? null,
+    planSortOrder: plan?.sortOrder ?? null,
   }));
 
   return deriveEntitlement(

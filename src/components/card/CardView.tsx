@@ -32,6 +32,8 @@ export interface CardViewProps {
   leadFormToken?: string;
   /** Destination du formulaire : carte (défaut) ou mini-site. */
   leadEndpoint?: "card" | "site";
+  /** « card » : colonne étroite (400px, défaut). « site » : pleine largeur (mini-site responsive). */
+  layout?: "card" | "site";
   footer?: { brandName: string; privacyUrl: string; legalUrl: string };
   /** Bloc mis en évidence dans l'éditeur. */
   highlightBlockId?: string | null;
@@ -181,8 +183,8 @@ export function CardView(props: CardViewProps) {
   return (
     <div style={style} className="card-root w-full">
       <article
-        className="mx-auto w-full max-w-[400px] overflow-hidden bg-[var(--c-card)] shadow-[0_8px_30px_rgba(20,33,61,0.08)]"
-        style={{ borderRadius: `calc(var(--radius) + 4px)` }}
+        className={`mx-auto w-full overflow-hidden bg-[var(--c-card)] shadow-[0_8px_30px_rgba(20,33,61,0.08)] ${props.layout === "site" ? "max-w-none" : "max-w-[400px]"}`}
+        style={{ borderRadius: props.layout === "site" ? 0 : `calc(var(--radius) + 4px)` }}
         aria-label={`Carte de visite de ${[doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ") || doc.identity.company}`}
       >
         <Header doc={doc} media={media} align={align} selectable={selectable} />

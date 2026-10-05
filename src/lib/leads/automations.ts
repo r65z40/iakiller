@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
 import { sendEmail } from "@/lib/email/send";
 import { templates } from "@/lib/email/templates";
+import { loadEntitlement } from "@/lib/billing/load";
 import type { Actor } from "@/lib/cards/service";
 import { AUTOMATION_ACTION_IDS as ACTION_IDS, AUTOMATION_TRIGGER_IDS as TRIGGER_IDS, STAGE_IDS, STAGE_LABELS } from "./crm";
 
@@ -71,6 +72,7 @@ function parseInput(input: AutomationInput) {
 
 export async function createAutomation(actor: Actor, input: AutomationInput) {
   if (!can(actor, "leads.viewAll")) throw new DomainError("forbidden", "Accès réservé aux gestionnaires.");
+  if (!(await loadEntitlement(actor.organization.id)).marketingSuite) throw new DomainError("entitlement", "Les relances automatiques sont incluses à partir de la formule Pro.");
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(schema.leadAutomation)
@@ -124,8 +126,16 @@ export async function runLeadAutomations(now = new Date()) {
   const rules = await db.select().from(schema.leadAutomation).where(eq(schema.leadAutomation.enabled, true));
   let emails = 0;
   let tasks = 0;
+  // Les relances font partie de la Suite acquisition (Pro et +) : on mémorise le droit par organisation.
+  const suiteByOrg = new Map<string, boolean>();
 
   for (const rule of rules) {
+    let hasSuite = suiteByOrg.get(rule.organizationId);
+    if (hasSuite === undefined) {
+      hasSuite = (await loadEntitlement(rule.organizationId).catch(() => null))?.marketingSuite ?? false;
+      suiteByOrg.set(rule.organizationId, hasSuite);
+    }
+    if (!hasSuite) continue;
     // 1. Prospects candidats pour cette règle.
     const conds = [eq(schema.lead.organizationId, rule.organizationId)];
     if (rule.trigger === "stage_entered") {

@@ -4,10 +4,26 @@ import { listSitesForActor } from "@/lib/sites/service";
 import { appUrl } from "@/lib/config";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState, PageHeader } from "@/components/ui";
+import { ProUpsell } from "@/components/billing/ProUpsell";
 import { CreateSite, SiteActions } from "./SitesClient";
 
 export default async function MiniSitesPage() {
   const ctx = await requireOrgPage("cards.create");
+  if (!ctx.entitlement.marketingSuite) {
+    return (
+      <ProUpsell
+        title="Mini-sites"
+        feature="Un vrai site vitrine multi-pages, sans quitter votre espace"
+        points={[
+          "Pages Accueil, Services, Réalisations, Contact — glisser-déposer",
+          "Mêmes blocs que vos cartes : galeries, avant/après, horaires, zone d'intervention",
+          "Modèles par métier (artisan, beauté, restaurant, libéral…)",
+          "Formulaire de contact relié à votre CRM",
+          "Adresse publique et QR code dédiés",
+        ]}
+      />
+    );
+  }
   const sites = await listSitesForActor(ctx);
   const base = `${appUrl()}/s/${ctx.organization.slug}`;
   return (

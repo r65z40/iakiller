@@ -224,7 +224,7 @@ export function SiteEditor(props: {
           </div>
           <div className="flex justify-center rounded-xl bg-surface/60 p-4 ring-1 ring-line">
             <div className={device === "phone" ? "w-[390px] max-w-full overflow-hidden rounded-[28px] ring-8 ring-ink/80" : "w-full overflow-hidden rounded-xl ring-1 ring-line"}>
-              <CardView doc={previewDoc} media={media} mode="preview" highlightBlockId={typeof selection === "string" ? selection : null} onSelectBlock={(id) => setSelection(id)} />
+              <CardView doc={previewDoc} media={media} mode="preview" layout={device === "desktop" ? "site" : "card"} highlightBlockId={typeof selection === "string" ? selection : null} onSelectBlock={(id) => setSelection(id)} />
             </div>
           </div>
         </div>

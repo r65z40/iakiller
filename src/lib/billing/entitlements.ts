@@ -27,6 +27,8 @@ export interface SubscriptionSnapshot {
   pastDueSince: Date | null;
   quotas: { cards: number; storageMb: number; members: number } | null;
   planName: string | null;
+  /** Rang de la formule (solo=1, pro=2, équipe=3, entreprise=4) ; null si inconnu. */
+  planSortOrder: number | null;
 }
 
 export interface EntitlementInput {
@@ -47,6 +49,11 @@ export interface Entitlement {
   /** Peut-on modifier les brouillons ? (le compte reste accessible pour réactiver) */
   canEdit: boolean;
   quotas: { cards: number; storageMb: number; members: number };
+  /**
+   * Suite acquisition (mini-sites, relances automatiques) : incluse pendant l'essai
+   * et à partir de la formule Pro. La formule Solo ne l'a pas.
+   */
+  marketingSuite: boolean;
   /** Échéance utile à afficher (fin d'essai, fin de période, fin de grâce). */
   until: Date | null;
   planName: string | null;
@@ -111,6 +118,7 @@ export function deriveEntitlement(input: EntitlementInput, now: Date = new Date(
       canPublish: false,
       canEdit: false,
       quotas: input.trialQuotas,
+      marketingSuite: false,
       until: null,
       source: "none",
     };
@@ -130,6 +138,7 @@ export function deriveEntitlement(input: EntitlementInput, now: Date = new Date(
       canPublish: true,
       canEdit: true,
       quotas: best.sub.quotas ?? input.trialQuotas,
+      marketingSuite: (best.sub.planSortOrder ?? 2) >= 2,
       until: best.ev.until,
       planName: best.sub.planName,
       source: "subscription",
@@ -145,6 +154,7 @@ export function deriveEntitlement(input: EntitlementInput, now: Date = new Date(
       canPublish: true,
       canEdit: true,
       quotas: input.trialQuotas,
+      marketingSuite: true,
       until: input.trialEndsAt,
       source: "trial",
     };
@@ -160,6 +170,7 @@ export function deriveEntitlement(input: EntitlementInput, now: Date = new Date(
     canPublish: false,
     canEdit: true,
     quotas: best?.sub.quotas ?? input.trialQuotas,
+    marketingSuite: false,
     until: best?.ev.until ?? input.trialEndsAt,
     planName: best?.sub.planName ?? null,
     source: "none",

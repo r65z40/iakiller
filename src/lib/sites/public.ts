@@ -14,7 +14,8 @@ export async function isSitePubliclyAccessible(site: typeof schema.site.$inferSe
   if (site.status !== "published" || !site.publishedVersionId) return false;
   if (site.disabledAt || site.adminSuspendedAt) return false;
   const ent = await loadEntitlement(site.organizationId, db, now);
-  return ent.publicAccess;
+  // Les mini-sites font partie de la Suite acquisition (Pro et +) : hors essai/Pro, le site n'est plus servi.
+  return ent.publicAccess && ent.marketingSuite;
 }
 
 async function loadAccessible(org: typeof schema.organization.$inferSelect, site: typeof schema.site.$inferSelect): Promise<PublicSiteResult> {

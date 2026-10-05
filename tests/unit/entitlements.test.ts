@@ -6,7 +6,7 @@ const now = new Date("2026-10-02T12:00:00Z");
 const day = 86400_000;
 const sub = (p: Partial<SubscriptionSnapshot>): SubscriptionSnapshot => ({
   status: "active", currentPeriodEnd: new Date(now.getTime() + 20 * day), cancelAtPeriodEnd: false, cancelAt: null, endedAt: null, pastDueSince: null,
-  quotas: { cards: 10, storageMb: 1000, members: 10 }, planName: "Équipe", ...p,
+  quotas: { cards: 10, storageMb: 1000, members: 10 }, planName: "Équipe", planSortOrder: 3, ...p,
 });
 const base = { trialStartedAt: null, trialEndsAt: null, adminSuspendedAt: null, subscriptions: [], trialQuotas, graceDays: 7 };
 
@@ -25,6 +25,17 @@ describe("machine d'état des droits", () => {
   it("abonnement actif avec quotas du plan", () => {
     const ent = deriveEntitlement({ ...base, subscriptions: [sub({})] }, now);
     expect(ent).toMatchObject({ state: "active", publicAccess: true, quotas: { cards: 10 } });
+  });
+
+  it("suite acquisition : incluse en essai, dès le Pro (rang ≥ 2), mais pas en Solo", () => {
+    const trial = deriveEntitlement({ ...base, trialStartedAt: new Date(now.getTime() - day), trialEndsAt: new Date(now.getTime() + day) }, now);
+    expect(trial.marketingSuite).toBe(true);
+    const solo = deriveEntitlement({ ...base, subscriptions: [sub({ planSortOrder: 1, planName: "Solo" })] }, now);
+    expect(solo.marketingSuite).toBe(false);
+    const pro = deriveEntitlement({ ...base, subscriptions: [sub({ planSortOrder: 2, planName: "Pro" })] }, now);
+    expect(pro.marketingSuite).toBe(true);
+    const expired = deriveEntitlement({ ...base, trialStartedAt: new Date(now.getTime() - 10 * day), trialEndsAt: new Date(now.getTime() - day) }, now);
+    expect(expired.marketingSuite).toBe(false);
   });
 
   it("résiliation programmée : actif jusqu'à l'échéance, puis fin de droit même sans webhook", () => {

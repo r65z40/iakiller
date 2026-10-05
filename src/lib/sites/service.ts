@@ -76,6 +76,7 @@ export async function createSite(actor: Actor, input: { title: string; template?
   return db.transaction(async (tx) => {
     await lockOrganization(tx, actor.organization.id);
     const ent = await loadEntitlement(actor.organization.id, tx);
+    if (!ent.marketingSuite) throw new DomainError("entitlement", "Les mini-sites sont inclus à partir de la formule Pro.");
     if (!ent.canEdit) throw new DomainError("entitlement", "Votre essai ou abonnement ne permet pas de créer un mini-site.");
     if ((await countActiveSites(tx, actor.organization.id)) >= ent.quotas.cards) {
       throw new DomainError("quota_exceeded", "Vous avez atteint le nombre de mini-sites de votre formule.");
@@ -114,6 +115,7 @@ export async function saveSiteDraft(actor: Actor, siteId: string, input: { revis
   const site = await getSiteForActor(actor, siteId);
   if (site.status === "archived") throw new DomainError("invalid", "Ce mini-site est archivé.");
   const ent = await loadEntitlement(actor.organization.id);
+  if (!ent.marketingSuite) throw new DomainError("entitlement", "Les mini-sites sont inclus à partir de la formule Pro.");
   if (!ent.canEdit) throw new DomainError("entitlement", "Votre essai ou abonnement ne permet plus de modifier ce mini-site.");
   await assertSiteMediaOwnership(db, actor.organization.id, parsed.data);
 
@@ -140,6 +142,7 @@ export async function publishSite(actor: Actor, siteId: string) {
     if (site.status === "archived") throw new DomainError("invalid", "Ce mini-site est archivé.");
     if (site.adminSuspendedAt) throw new DomainError("forbidden", "Mini-site suspendu par la plateforme.");
     const ent = await loadEntitlement(actor.organization.id, tx);
+    if (!ent.marketingSuite) throw new DomainError("entitlement", "Les mini-sites sont inclus à partir de la formule Pro.");
     if (!ent.canPublish) throw new DomainError("entitlement", "Publication impossible sans essai ni abonnement actif.");
 
     const parsed = parseSiteDocument(site.draft);

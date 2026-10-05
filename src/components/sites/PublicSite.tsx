@@ -47,11 +47,12 @@ export async function PublicSite({
           </ul>
         </nav>
       </header>
-      <main className="mx-auto max-w-[520px] px-0 py-0">
+      <main className="w-full">
         <CardView
           doc={doc}
           media={media}
           mode="public"
+          layout="site"
           publicToken={site.publicToken}
           leadEndpoint="site"
           leadFormToken={hasLeadForm ? leadFormToken(site.id) : undefined}

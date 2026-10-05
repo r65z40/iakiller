@@ -9,11 +9,15 @@ import { isLockable } from "@/lib/brand";
 import { parseSiteDocument } from "@/lib/sites/document";
 import { emptySiteDocument } from "@/lib/sites/defaults";
 import { SiteEditor } from "@/components/sites/SiteEditor";
+import { ProUpsell } from "@/components/billing/ProUpsell";
 import { DomainError } from "@/lib/errors";
 
 export default async function SiteEditorPage({ params }: PageProps<"/app/mini-sites/[id]">) {
   const { id } = await params;
   const ctx = await requireOrgPage("cards.create");
+  if (!ctx.entitlement.marketingSuite) {
+    return <ProUpsell title="Mini-sites" feature="Les mini-sites sont inclus à partir de la formule Pro" points={["Site vitrine multi-pages", "Modèles par métier", "Formulaire relié au CRM"]} />;
+  }
   let site;
   try {
     site = await getSiteForActor(ctx, id);

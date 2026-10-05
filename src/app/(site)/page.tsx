@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, ArrowRight, Mail, CalendarClock, ShieldCheck, Car } from "lucide-react";
+import { QrCode, IdCard, Inbox, BarChart3, Users, RefreshCw, Smartphone, Check, ArrowRight, Mail, CalendarClock, ShieldCheck, Car, LayoutTemplate, KanbanSquare, Send, GripVertical } from "lucide-react";
 import { brand } from "@/lib/config";
 import { listPlans } from "@/lib/billing/service";
 import { DemoCard } from "@/components/site/DemoCard";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export function generateMetadata(): Metadata {
   return pageMeta({
     description:
-      "La carte de visite numérique des artisans, indépendants et PME : éditeur simple, QR code permanent, fiche contact vCard, formulaire de demandes et statistiques claires. Essai gratuit 7 jours, sans carte bancaire.",
+      "La carte de visite numérique qui devient un outil marketing : mini-site vitrine, CRM de prospects, relances automatiques, QR codes intelligents et statistiques claires. Pour artisans, indépendants et PME. Essai gratuit 7 jours, sans carte bancaire.",
     path: "/",
   });
 }
@@ -71,11 +71,12 @@ export default async function Home() {
             </span>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.6rem]">
               Votre carte de visite,{" "}
-              <span className="bg-gradient-to-r from-brand to-brand-dark bg-clip-text text-transparent">en version numérique</span>.
+              <span className="bg-gradient-to-r from-brand to-brand-dark bg-clip-text text-transparent">boostée</span>.
+              Un vrai outil marketing.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              Pensée pour les <strong className="text-ink">artisans, indépendants et PME</strong>. Créez-la en quelques minutes,
-              partagez-la par QR code ou par lien, et recevez des demandes de contact. Ou confiez sa création à notre équipe.
+              Bien plus qu&apos;une carte numérique : un <strong className="text-ink">mini-site vitrine</strong>, un <strong className="text-ink">CRM</strong> pour suivre vos prospects
+              et des <strong className="text-ink">relances automatiques</strong>. Captez des demandes par QR code, transformez-les en clients — sans compétence technique.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/inscription" className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3.5 font-semibold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark hover:shadow-brand/30">
@@ -155,6 +156,86 @@ export default async function Home() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* Suite acquisition / outil marketing */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand ring-1 ring-brand/20">Un outil marketing, pas juste une carte</span>
+          <h2 className="mt-4 text-3xl font-extrabold">De la première rencontre au client signé</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-muted">Captez des contacts, suivez-les et relancez-les — tout au même endroit. La suite acquisition est incluse à partir de la formule Pro.</p>
+        </div>
+        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: LayoutTemplate, title: "Mini-site vitrine", text: "Un vrai site multi-pages (Accueil, Services, Réalisations, Contact) avec vos blocs, en glisser-déposer. Modèles par métier.", pro: true },
+            { icon: KanbanSquare, title: "CRM intégré", text: "Un pipeline clair : chaque demande devient un prospect que vous faites avancer jusqu'à « Gagné ». Tâches, notes, étiquettes.", pro: false },
+            { icon: Send, title: "Relances automatiques", text: "Un devis sans réponse ? Une relance email ou une tâche de rappel part toute seule, au bon moment.", pro: true },
+            { icon: QrCode, title: "QR codes intelligents", text: "Un QR par support (carte, véhicule, vitrine), une destination modifiable et des campagnes mesurées.", pro: false },
+          ].map((f) => (
+            <li key={f.title} className="relative rounded-2xl bg-white p-6 ring-1 ring-line transition hover:shadow-md">
+              {f.pro && <span className="absolute right-4 top-4 rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-white">Pro</span>}
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-soft text-brand"><f.icon className="h-5 w-5" /></div>
+              <h3 className="mt-4 font-bold">{f.title}</h3>
+              <p className="mt-1 text-sm text-muted">{f.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Éditeur de mini-site — démonstration */}
+      <section className="bg-surface">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-semibold text-brand ring-1 ring-brand/20"><LayoutTemplate className="h-4 w-4" /> Éditeur de mini-site</span>
+            <h2 className="mt-4 text-3xl font-extrabold">Construisez votre site en glissant des blocs</h2>
+            <p className="mt-3 text-muted">
+              Pas de code, pas d&apos;agence. Choisissez un modèle métier, ajoutez vos pages, glissez-déposez vos blocs (galerie, avant/après, horaires, zone d&apos;intervention, formulaire…) et publiez. Le thème, le logo et vos coordonnées sont partagés par toutes les pages : aucune double saisie.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm">
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Pages Accueil, Services, Réalisations, Contact</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Les mêmes blocs que vos cartes, en plus grand</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Aperçu mobile et ordinateur en direct</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> Formulaire de contact relié à votre CRM</li>
+            </ul>
+            <Link href="/inscription" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-white transition hover:bg-brand-dark">
+              Essayer l&apos;éditeur <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          {/* Mock d'éditeur */}
+          <div className="rounded-2xl bg-white p-4 shadow-xl ring-1 ring-line">
+            <div className="flex items-center gap-1.5 pb-3">
+              <span className="h-3 w-3 rounded-full bg-[#ff5f57]" /><span className="h-3 w-3 rounded-full bg-[#febc2e]" /><span className="h-3 w-3 rounded-full bg-[#28c840]" />
+              <span className="ml-3 truncate rounded-md bg-surface px-3 py-1 text-xs text-muted">macarte.pro/s/atelier-moreau</span>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] gap-3">
+              {/* Colonne pages + blocs */}
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-muted">PAGES</p>
+                {["Accueil", "Services", "Réalisations", "Contact"].map((p, i) => (
+                  <div key={p} className={`rounded-md px-2 py-1 text-xs ${i === 0 ? "bg-brand text-white" : "bg-surface text-ink"}`}>{p}</div>
+                ))}
+                <p className="pt-2 text-[11px] font-bold text-muted">BLOCS</p>
+                {["Présentation", "Galerie", "Horaires", "Formulaire"].map((b) => (
+                  <div key={b} className="flex items-center gap-1 rounded-md bg-surface px-2 py-1 text-xs text-ink"><GripVertical className="h-3 w-3 text-muted" /> {b}</div>
+                ))}
+              </div>
+              {/* Aperçu */}
+              <div className="overflow-hidden rounded-lg ring-1 ring-line">
+                <div className="h-16 bg-gradient-to-br from-brand to-brand-dark" />
+                <div className="space-y-2 p-3">
+                  <div className="h-3 w-2/3 rounded bg-ink/80" />
+                  <div className="h-2 w-full rounded bg-surface" />
+                  <div className="h-2 w-5/6 rounded bg-surface" />
+                  <div className="mt-2 grid grid-cols-3 gap-1.5">
+                    <div className="aspect-square rounded bg-brand-soft" /><div className="aspect-square rounded bg-brand-soft" /><div className="aspect-square rounded bg-brand-soft" />
+                  </div>
+                  <div className="mt-2 h-7 rounded-md bg-brand" />
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-center text-xs text-muted">Aperçu de l&apos;éditeur (illustration).</p>
+          </div>
         </div>
       </section>
 
@@ -288,8 +369,8 @@ export default async function Home() {
           <div>
             <h2 className="text-3xl font-extrabold">Essayez gratuitement pendant 7 jours</h2>
             <p className="mt-2 max-w-xl text-white/85">
-              Jusqu&apos;à 3 cartes pendant l&apos;essai, sans carte bancaire. Toutes les fonctions sont incluses dans chaque formule — seuls les quotas changent.
-              {entry ? " Des formules mensuelles et annuelles pour tous les besoins." : ""}
+              Pendant l&apos;essai, vous testez <strong>tout</strong> — mini-site, CRM et relances compris. Ensuite, la carte et ses outils dès la formule Solo ; la suite acquisition (mini-site, relances) à partir du Pro.
+              {entry ? " Formules mensuelles et annuelles." : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
