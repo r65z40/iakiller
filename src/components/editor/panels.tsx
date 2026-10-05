@@ -325,6 +325,28 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
           {block.items.some((i) => !i.mediaId) && <p className="text-xs font-semibold text-danger">Choisissez une image pour chaque élément.</p>}
         </div>
       );
+    case "beforeAfter":
+      return (
+        <div className="space-y-4">
+          {titleField}
+          <TextInput label="Introduction (facultatif)" value={block.intro} onChange={(v) => onChange({ ...block, intro: v })} maxLength={300} multiline rows={2} />
+          <ItemList items={block.items} max={12} addLabel="Ajouter une comparaison" onChange={(items) => onChange({ ...block, items })}
+            create={() => ({ id: blockId(), beforeMediaId: "", afterMediaId: "", caption: "", description: "" })}
+            render={(item, update) => (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <MediaPicker kind="image" cropAspect={4 / 3} label="Avant" allowNone={false} library={library} value={item.beforeMediaId || null} onChange={(v) => v && update({ beforeMediaId: v })} onUploaded={onUploaded} />
+                  <MediaPicker kind="image" cropAspect={4 / 3} label="Après" allowNone={false} library={library} value={item.afterMediaId || null} onChange={(v) => v && update({ afterMediaId: v })} onUploaded={onUploaded} />
+                </div>
+                <TextInput label="Titre (facultatif)" value={item.caption} onChange={(v) => update({ caption: v })} maxLength={120} />
+                <TextInput label="Description (facultatif)" value={item.description} onChange={(v) => update({ description: v })} maxLength={300} multiline rows={2} />
+              </>
+            )}
+          />
+          {block.items.some((i) => !i.beforeMediaId || !i.afterMediaId) && <p className="text-xs font-semibold text-danger">Chaque comparaison a besoin d&apos;une photo avant ET d&apos;une photo après.</p>}
+          <p className="text-xs text-muted">Un curseur permettra au visiteur de glisser entre l&apos;avant et l&apos;après. Idéal pour les rénovations, détailing auto, coiffure, paysagisme…</p>
+        </div>
+      );
     case "video": {
       const current = block.provider && block.videoId ? (block.provider === "youtube" ? `https://youtu.be/${block.videoId}` : `https://vimeo.com/${block.videoId}`) : "";
       return (

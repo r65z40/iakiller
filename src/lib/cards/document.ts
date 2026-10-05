@@ -154,6 +154,24 @@ export const blockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     ...blockBase,
+    type: z.literal("beforeAfter"),
+    title: short(60),
+    intro: short(300),
+    /** Comparaisons avant/après : chacune a une photo avant, une photo après, un titre et une description. */
+    items: z
+      .array(
+        z.object({
+          id,
+          beforeMediaId: z.union([z.literal(""), id]),
+          afterMediaId: z.union([z.literal(""), id]),
+          caption: short(120),
+          description: short(300),
+        }),
+      )
+      .max(12),
+  }),
+  z.object({
+    ...blockBase,
     type: z.literal("video"),
     title: short(60),
     provider: z.enum(["youtube", "vimeo"]).nullable(),
@@ -318,6 +336,7 @@ export function publicDocument(doc: CardDocument): CardDocument {
       .filter((b) => !b.hidden)
       .map((b): CardBlock => {
         if (b.type === "gallery") return { ...b, items: b.items.filter((i) => i.mediaId) };
+        if (b.type === "beforeAfter") return { ...b, items: b.items.filter((i) => i.beforeMediaId && i.afterMediaId) };
         if (b.type === "documents") return { ...b, items: b.items.filter((i) => i.mediaId) };
         // Les réglages de notification du formulaire sont internes : jamais exposés publiquement.
         if (b.type === "leadForm") return { ...b, notifyEmails: [], includeContentInEmail: false };
@@ -333,6 +352,7 @@ export function collectMediaIds(doc: CardDocument): string[] {
   if (doc.banner.mediaId) ids.add(doc.banner.mediaId);
   for (const b of doc.blocks) {
     if (b.type === "gallery" || b.type === "documents") b.items.forEach((i) => i.mediaId && ids.add(i.mediaId));
+    if (b.type === "beforeAfter") b.items.forEach((i) => { if (i.beforeMediaId) ids.add(i.beforeMediaId); if (i.afterMediaId) ids.add(i.afterMediaId); });
   }
   return [...ids];
 }
@@ -351,6 +371,7 @@ export function publishProblems(doc: CardDocument): string[] {
     if (b.type === "reviews" && !b.readUrl && !b.writeUrl) problems.push("Le bloc avis doit contenir au moins un lien (consulter ou laisser un avis).");
     if (b.type === "video" && (!b.provider || !b.videoId)) problems.push("Le bloc vidéo doit contenir une vidéo YouTube ou Vimeo.");
     if ((b.type === "gallery" || b.type === "documents") && b.items.some((i) => !i.mediaId)) problems.push("Chaque élément de galerie ou de document doit avoir un fichier.");
+    if (b.type === "beforeAfter" && b.items.some((i) => !i.beforeMediaId || !i.afterMediaId)) problems.push("Chaque comparaison avant/après doit avoir une photo avant ET une photo après.");
   }
   return [...new Set(problems)];
 }
