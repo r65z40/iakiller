@@ -462,6 +462,17 @@ export function BlockPanel({ block, onChange, library, onUploaded }: { block: Ca
             </label>
           </fieldset>
 
+          <fieldset className="space-y-3 rounded-lg border border-line p-3">
+            <legend className="px-1 text-sm font-semibold">Photos</legend>
+            <label className="flex items-start gap-2 text-sm font-semibold">
+              <input type="checkbox" checked={block.allowPhotos} onChange={(e) => onChange({ ...block, allowPhotos: e.target.checked })} className="mt-0.5" />
+              <span>Autoriser le visiteur à joindre des photos<span className="mt-0.5 block text-xs font-normal text-muted">Utile pour un devis : photo d&apos;un chantier, d&apos;une pièce à réparer, etc.</span></span>
+            </label>
+            {block.allowPhotos && (
+              <SelectInput label="Nombre maximal de photos" value={String(block.maxPhotos)} onChange={(v) => onChange({ ...block, maxPhotos: Number(v) })} options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}` }))} />
+            )}
+          </fieldset>
+
           <p className="text-xs text-muted">Collectez uniquement ce qui est nécessaire pour recontacter. Le visiteur est informé que ses données vous sont destinées ; la case d&apos;accord marketing est séparée et décochée par défaut.</p>
         </div>
       );

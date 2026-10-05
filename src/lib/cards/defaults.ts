@@ -72,6 +72,8 @@ export function newBlock(type: BlockType): CardBlock {
         customFields: [],
         notifyEmails: [],
         includeContentInEmail: false,
+        allowPhotos: false,
+        maxPhotos: 3,
       };
   }
 }

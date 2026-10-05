@@ -834,6 +834,9 @@ type LeadBlock = Extract<CardBlock, { type: "leadForm" }>;
 function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const fields = block.fields;
   const fieldDefs: { key: keyof LeadBlock["fields"]; label: string; type: string; autoComplete: string }[] = [
     { key: "name", label: "Nom", type: "text", autoComplete: "name" },
@@ -856,6 +859,7 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
     const body: Record<string, unknown> = { token: publicToken, formToken, viewId: getViewId?.() ?? null };
     fd.forEach((v, k) => (body[k] = typeof v === "string" ? v : ""));
     body.marketingConsent = fd.get("marketingConsent") === "on";
+    if (block.allowPhotos && photos.length) body.photoIds = photos.map((p) => p.id);
     try {
       const res = await fetch("/api/public/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -868,6 +872,29 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
       setState("error");
       setError("Connexion impossible. Vérifiez votre réseau et réessayez.");
     }
+  }
+
+  async function onPickPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.currentTarget.value = "";
+    if (mode !== "public" || !publicToken) { setPhotoError("Disponible une fois la carte publiée."); return; }
+    setPhotoError(null);
+    setUploading(true);
+    const room = block.maxPhotos - photos.length;
+    for (const file of files.slice(0, room)) {
+      try {
+        const fd = new FormData();
+        fd.append("token", publicToken);
+        fd.append("file", file);
+        const res = await fetch("/api/public/lead-upload", { method: "POST", body: fd });
+        const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+        if (res.ok && data.id) setPhotos((p) => [...p, { id: data.id!, url: URL.createObjectURL(file) }]);
+        else setPhotoError(data.error ?? "Échec de l'envoi de la photo.");
+      } catch {
+        setPhotoError("Connexion impossible pour l'envoi de la photo.");
+      }
+    }
+    setUploading(false);
   }
 
   if (state === "sent") {
@@ -914,6 +941,27 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
           </label>
         );
       })}
+      {block.allowPhotos && (
+        <div>
+          <p className="text-[13px] font-semibold">Photos <span className="font-normal text-[var(--c-muted)]">(facultatif — jusqu&apos;à {block.maxPhotos})</span></p>
+          {photos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {photos.map((p) => (
+                <div key={p.id} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt="Photo jointe" className="h-16 w-16 rounded-lg object-cover ring-1 ring-[var(--c-line)]" />
+                  <button type="button" onClick={() => setPhotos((ps) => ps.filter((x) => x.id !== p.id))} aria-label="Retirer la photo" className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--c-text)] text-[11px] text-white">×</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {photos.length < block.maxPhotos && (
+            <input type="file" accept="image/*" multiple onChange={onPickPhotos} disabled={uploading || mode !== "public"} className="mt-2 block w-full text-[13px] text-[var(--c-muted)]" />
+          )}
+          {uploading && <p className="mt-1 text-[12px] text-[var(--c-muted)]">Envoi des photos…</p>}
+          {photoError && <p className="mt-1 text-[12px] font-semibold text-[#b42318]">{photoError}</p>}
+        </div>
+      )}
       {/* Champ piège anti-robot, invisible pour les humains. */}
       <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label>Ne pas remplir<input name="website" tabIndex={-1} autoComplete="off" /></label>

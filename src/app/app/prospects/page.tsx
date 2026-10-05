@@ -27,7 +27,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/app/prospe
       ) : (
         <ul className="space-y-3">
           {leads.map(({ lead, cardTitle }) => (
-            <LeadRow key={lead.id} canDelete={can(ctx, "leads.viewAll")} lead={{ id: lead.id, name: lead.name, email: lead.email, phone: lead.phone, company: lead.company, message: lead.message, extra: lead.extra ?? [], status: lead.status, notes: lead.notes ?? "", marketingConsent: lead.marketingConsent, createdAt: formatDateTime(lead.createdAt), cardTitle: cardTitle ?? "Carte supprimée" }} />
+            <LeadRow key={lead.id} canDelete={can(ctx, "leads.viewAll")} lead={{ id: lead.id, name: lead.name, email: lead.email, phone: lead.phone, company: lead.company, message: lead.message, extra: lead.extra ?? [], photos: lead.photoIds ?? [], status: lead.status, notes: lead.notes ?? "", marketingConsent: lead.marketingConsent, createdAt: formatDateTime(lead.createdAt), cardTitle: cardTitle ?? "Carte supprimée" }} />
           ))}
         </ul>
       )}

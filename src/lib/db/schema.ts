@@ -352,6 +352,8 @@ export const mediaAsset = pgTable(
     width: integer("width"),
     height: integer("height"),
     uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+    /** Origine : null = médiathèque de l'organisation ; "lead" = pièce jointe envoyée via un formulaire public. */
+    source: text("source"),
     deletedAt: ts("deleted_at"),
     createdAt: createdAt(),
   },
@@ -636,6 +638,8 @@ export const lead = pgTable(
     message: text("message"),
     /** Réponses aux champs personnalisés du formulaire sur mesure : [{ label, value }]. */
     extra: jsonb("extra").$type<{ label: string; value: string }[]>(),
+    /** Identifiants des photos jointes (média source="lead"), consultables par l'organisation. */
+    photoIds: jsonb("photo_ids").$type<string[]>(),
     /** Accord marketing distinct, facultatif, décoché par défaut. */
     marketingConsent: boolean("marketing_consent").notNull().default(false),
     /** new | contacted | done */

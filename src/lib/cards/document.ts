@@ -234,6 +234,10 @@ export const blockSchema = z.discriminatedUnion("type", [
     notifyEmails: z.array(short(254)).max(5).default([]),
     /** Inclure le détail de la demande dans l'email de notification (sinon, consultable dans l'espace). */
     includeContentInEmail: z.boolean().default(false),
+    /** Autoriser le visiteur à joindre des photos (ex. chantier, pièce à réparer). */
+    allowPhotos: z.boolean().default(false),
+    /** Nombre maximal de photos jointes (1 à 5). */
+    maxPhotos: z.number().int().min(1).max(5).default(3),
   }),
 ]);
 export type CardBlock = z.infer<typeof blockSchema>;
