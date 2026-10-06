@@ -3,10 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors,
-  useDraggable, useDroppable, type DragEndEvent, type DragStartEvent,
+  DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable, type Announcements, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { STAGES } from "@/lib/leads/crm";
+import { STAGES, STAGE_LABELS } from "@/lib/leads/crm";
 import { moveLeadStageAction } from "./actions";
 
 export interface BoardLead {
@@ -89,7 +89,16 @@ export function Board({ initialLeads }: { initialLeads: BoardLead[] }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+    useSensor(KeyboardSensor),
   );
+
+  // Annonces pour les lecteurs d'écran (déplacement au clavier : Espace puis flèches).
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Prospect « ${leads.find((l) => l.id === String(active.id))?.name || "sans nom"} » saisi. Utilisez les flèches pour choisir une étape, Espace pour déposer.`,
+    onDragOver: ({ over }) => (over ? `Sur la colonne ${STAGE_LABELS[String(over.id)] ?? String(over.id)}.` : ""),
+    onDragEnd: ({ over }) => (over ? `Déposé dans ${STAGE_LABELS[String(over.id)] ?? String(over.id)}.` : "Déplacement annulé."),
+    onDragCancel: () => "Déplacement annulé.",
+  };
 
   const byStage = useMemo(() => {
     const map: Record<string, BoardLead[]> = {};
@@ -120,7 +129,7 @@ export function Board({ initialLeads }: { initialLeads: BoardLead[] }) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} accessibility={{ announcements }} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {STAGES.map((s) => <Column key={s.id} id={s.id} label={s.label} leads={byStage[s.id] ?? []} />)}
       </div>

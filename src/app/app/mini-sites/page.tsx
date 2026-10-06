@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireOrgPage } from "@/lib/context";
 import { listSitesForActor } from "@/lib/sites/service";
+import { listCardsForActor } from "@/lib/cards/service";
 import { appUrl } from "@/lib/config";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState, PageHeader } from "@/components/ui";
@@ -24,14 +25,14 @@ export default async function MiniSitesPage() {
       />
     );
   }
-  const sites = await listSitesForActor(ctx);
+  const [sites, cards] = await Promise.all([listSitesForActor(ctx), listCardsForActor(ctx)]);
   const base = `${appUrl()}/s/${ctx.organization.slug}`;
   return (
     <div className="max-w-4xl">
       <PageHeader
         title="Mini-sites"
         description="Un vrai site vitrine multi-pages (Accueil, Services, Réalisations, Contact), construit avec les mêmes blocs que vos cartes. Aucune double saisie : thème, identité et bannière sont partagés par toutes les pages."
-        actions={<CreateSite />}
+        actions={<CreateSite cards={cards.map((c) => ({ id: c.id, title: c.title }))} />}
       />
       {sites.length === 0 ? (
         <EmptyState title="Aucun mini-site">Créez votre premier mini-site à partir d&apos;un modèle métier ou d&apos;une page vierge.</EmptyState>

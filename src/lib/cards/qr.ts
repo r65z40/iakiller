@@ -23,13 +23,15 @@ export function qrTargetUrl(publicToken: string, variantSlug?: string | null) {
  * - section : la carte, positionnée sur un bloc précis (ex. formulaire, galerie) via ancre.
  * - url     : une adresse externe (http/https), modifiable sans réimprimer le QR.
  */
-export type QrDestType = "card" | "section" | "url";
+export type QrDestType = "card" | "section" | "url" | "site";
 export interface QrDest {
   type: QrDestType;
   /** Pour type "url" : adresse externe. */
   url?: string;
   /** Pour type "section" : identifiant du bloc cible sur la carte. */
   section?: string;
+  /** Pour type "site" : slug du mini-site (de la même organisation). */
+  site?: string;
 }
 
 /** Variante de QR code : libellé, slug stable, destination, et campagne temporaire optionnelle. */
@@ -46,11 +48,12 @@ export interface QrVariant {
 export const MAX_QR_VARIANTS = 12;
 
 const SECTION_RE = /^[A-Za-z0-9_-]{4,40}$/;
+const SITE_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Valide une destination de QR (type + url http(s) ou identifiant de section). */
+/** Valide une destination de QR (carte, bloc, URL externe ou mini-site). */
 function normalizeDest(raw: unknown): QrDest {
-  const r = (raw ?? {}) as { type?: unknown; url?: unknown; section?: unknown };
-  const type: QrDestType = r.type === "url" || r.type === "section" ? r.type : "card";
+  const r = (raw ?? {}) as { type?: unknown; url?: unknown; section?: unknown; site?: unknown };
+  const type: QrDestType = r.type === "url" || r.type === "section" || r.type === "site" ? r.type : "card";
   if (type === "url") {
     const url = normalizeWebUrl(String(r.url ?? ""));
     return url ? { type: "url", url } : { type: "card" };
@@ -58,6 +61,10 @@ function normalizeDest(raw: unknown): QrDest {
   if (type === "section") {
     const section = String(r.section ?? "").trim();
     return SECTION_RE.test(section) ? { type: "section", section } : { type: "card" };
+  }
+  if (type === "site") {
+    const site = String(r.site ?? "").trim().toLowerCase().slice(0, 40);
+    return SITE_SLUG_RE.test(site) ? { type: "site", site } : { type: "card" };
   }
   return { type: "card" };
 }

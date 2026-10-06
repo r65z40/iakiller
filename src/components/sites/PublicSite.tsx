@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { CardView } from "@/components/card/CardView";
 import { buildMediaMap } from "@/lib/cards/media-map";
 import { collectMediaIds } from "@/lib/cards/document";
 import { brand } from "@/lib/config";
 import { leadFormToken } from "@/lib/security/signed";
+import { classifyUserAgent } from "@/lib/analytics/service";
 import { pageDocument, type SiteDocument } from "@/lib/sites/document";
+import { recordSiteView } from "@/lib/sites/views";
 
 /** Rendu public d'une page de mini-site : barre de navigation entre pages + rendu de blocs réutilisé. */
 export async function PublicSite({
@@ -23,6 +26,11 @@ export async function PublicSite({
   const page = (activeSlug && document.pages.find((p) => p.slug === activeSlug)) || document.pages[0];
   const doc = pageDocument(document, page);
   const media = await buildMediaMap(organizationId, collectMediaIds(doc), "public");
+
+  // Comptage des vues (agrégé par jour, sans cookie), hors robots.
+  if (!classifyUserAgent((await headers()).get("user-agent")).isBot) {
+    await recordSiteView(site.id, organizationId);
+  }
   const hasLeadForm = page.blocks.some((b) => b.type === "leadForm" && !b.hidden);
   const base = `/s/${orgSlug}/${site.slug}`;
   const siteName = document.identity.company || [document.identity.firstName, document.identity.lastName].filter(Boolean).join(" ") || site.title;
@@ -47,7 +55,7 @@ export async function PublicSite({
           </ul>
         </nav>
       </header>
-      <main className="w-full">
+      <main className="w-full px-0 py-6 sm:px-4">
         <CardView
           doc={doc}
           media={media}

@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { createSite, getSiteForActor, listSitesForActor, publishSite, saveSiteDraft } from "@/lib/sites/service";
+import { recordSiteView, siteViewTotals } from "@/lib/sites/views";
+import { createCard, getCardForActor, saveDraft } from "@/lib/cards/service";
+import { newBlock } from "@/lib/cards/defaults";
 import { parseSiteDocument } from "@/lib/sites/document";
 import { resolvePublicSite } from "@/lib/sites/public";
 import { submitSiteLead } from "@/lib/sites/leads";
@@ -91,5 +94,37 @@ describe("mini-sites", () => {
     const freshToken = leadFormToken(s.id);
     const r = await submitSiteLead({ token: s.publicToken, formToken: freshToken, email: "client@exemple.test" }, { ipKey: "ip-fast" });
     expect(r).toMatchObject({ ok: false });
+  });
+
+  it("crée un mini-site à partir d'une carte (reprend identité et blocs)", async () => {
+    const { actor } = await createOrgWithOwner();
+    const card = await createCard(actor, { title: "Ma carte" });
+    const row = await getCardForActor(actor, card.id);
+    const doc = structuredClone(row.draft);
+    doc.identity.company = "Atelier Durand";
+    doc.blocks.push(newBlock("gallery"));
+    await saveDraft(actor, card.id, { revision: row.draftRevision, document: doc });
+
+    const { id } = await createSite(actor, { title: "", fromCardId: card.id });
+    const s = await getSiteForActor(actor, id);
+    expect(s.cardId).toBe(card.id);
+    const parsed = parseSiteDocument(s.draft);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.identity.company).toBe("Atelier Durand");
+      expect(parsed.data.pages.map((p) => p.key)).toEqual(["accueil", "contact"]);
+      // Le formulaire est placé sur la page Contact, pas sur l'accueil.
+      expect(parsed.data.pages[1].blocks.some((b) => b.type === "leadForm")).toBe(true);
+    }
+  });
+
+  it("comptabilise les vues d'un mini-site par jour", async () => {
+    const { actor } = await createOrgWithOwner();
+    const s = await publishedSite(actor);
+    await recordSiteView(s.id, s.organizationId);
+    await recordSiteView(s.id, s.organizationId);
+    const totals = await siteViewTotals(actor);
+    const row = totals.find((t) => t.id === s.id);
+    expect(row?.views).toBe(2);
   });
 });

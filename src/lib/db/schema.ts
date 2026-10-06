@@ -231,8 +231,8 @@ export const card = pgTable(
       {
         slug: string;
         label: string;
-        dest: { type: "card" | "section" | "url"; url?: string; section?: string };
-        campaign?: { dest: { type: "card" | "section" | "url"; url?: string; section?: string }; startsAt?: string; endsAt?: string };
+        dest: { type: "card" | "section" | "url" | "site"; url?: string; section?: string; site?: string };
+        campaign?: { dest: { type: "card" | "section" | "url" | "site"; url?: string; section?: string; site?: string }; startsAt?: string; endsAt?: string };
       }[]
     >(),
     /** Incrémenté à chaque sauvegarde du brouillon ; sert à détecter les conflits. */
@@ -383,6 +383,18 @@ export const site = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [uniqueIndex("site_org_slug_uq").on(t.organizationId, t.slug), index("site_org_status_idx").on(t.organizationId, t.status)],
+);
+
+/** Vues d'un mini-site, agrégées par jour (sans cookie ni identifiant du visiteur). */
+export const siteView = pgTable(
+  "site_view",
+  {
+    siteId: text("site_id").notNull().references(() => site.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.siteId, t.day] }), index("site_view_org_idx").on(t.organizationId)],
 );
 
 /** Version publiée immuable d'un mini-site (comme cardVersion pour les cartes). */

@@ -5,7 +5,9 @@ import { breakdown, dailySeries, topCards, totals, type StatsFilter } from "@/li
 import { EVENT_TYPES } from "@/lib/analytics/service";
 import { analyticsConfig } from "@/lib/analytics/config";
 import { listCardsForActor } from "@/lib/cards/service";
+import { siteViewTotals } from "@/lib/sites/views";
 import { can } from "@/lib/permissions";
+import { appUrl } from "@/lib/config";
 import { db, schema } from "@/lib/db";
 import { Alert, PageHeader, Panel } from "@/components/ui";
 import { DailyChart } from "./DailyChart";
@@ -40,6 +42,8 @@ export default async function StatsPage({ searchParams }: PageProps<"/app/statis
   const members = can(ctx, "analytics.viewAll")
     ? await db.select({ id: schema.user.id, name: schema.user.name }).from(schema.membership).innerJoin(schema.user, eq(schema.user.id, schema.membership.userId)).where(and(eq(schema.membership.organizationId, ctx.organization.id)))
     : [];
+  const siteViews = ctx.entitlement.marketingSuite ? await siteViewTotals(ctx, days) : [];
+  const siteBase = `${appUrl()}/s/${ctx.organization.slug}`;
   const cfg = analyticsConfig();
   const qs = new URLSearchParams(Object.entries({ periode: periodKey, carte: filter.cardId ?? "", membre: filter.memberUserId ?? "", internes: filter.includeInternal ? "1" : "" }).filter(([, v]) => v) as [string, string][]).toString();
 
@@ -106,6 +110,23 @@ export default async function StatsPage({ searchParams }: PageProps<"/app/statis
         <Panel title="Navigateurs">{list(browsers)}</Panel>
         <Panel title="Pays (si fourni par l'hébergeur)">{list(countries)}</Panel>
       </div>
+
+      {siteViews.length > 0 && (
+        <Panel title={`Mini-sites — vues (${days} j)`} className="mt-6">
+          <ul className="divide-y divide-line text-sm">
+            {siteViews.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 py-2">
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-semibold">{s.title}</span>
+                  {s.status === "published" ? <a href={`${siteBase}/${s.slug}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-brand underline">voir</a> : <span className="ml-2 text-xs text-muted">brouillon</span>}
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums">{s.views}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted">Vue mesurée : affichage d&apos;une page du mini-site, hors robots détectés, agrégé par jour, sans cookie.</p>
+        </Panel>
+      )}
 
       <Panel title="Définitions et limites" className="mt-6">
         <ul className="list-disc space-y-1 pl-5 text-sm text-muted">

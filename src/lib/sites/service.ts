@@ -6,9 +6,31 @@ import { DomainError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
 import { loadEntitlement } from "@/lib/billing/load";
 import { slugify, validateCardSlug } from "@/lib/cards/slug";
-import type { Actor } from "@/lib/cards/service";
+import { getCardForActor, type Actor } from "@/lib/cards/service";
+import { parseDocument } from "@/lib/cards/document";
+import { emptyDocument, newBlock } from "@/lib/cards/defaults";
+import { blockId } from "@/lib/cards/client-ids";
+import { CURRENT_SCHEMA_VERSION } from "@/lib/cards/constants";
 import { collectSiteMediaIds, parseSiteDocument, siteProblems, type SiteDocument } from "./document";
 import { buildSiteTemplate } from "./defaults";
+
+/** Construit un mini-site à partir du contenu d'une carte (reprend thème, identité, bannière et blocs). */
+function siteDocFromCard(cardDraft: unknown): SiteDocument {
+  const parsed = parseDocument(cardDraft);
+  const cd = parsed.success ? parsed.data : emptyDocument();
+  const leadForm = cd.blocks.find((b) => b.type === "leadForm");
+  const homeBlocks = cd.blocks.filter((b) => b.type !== "leadForm");
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    theme: cd.theme,
+    identity: cd.identity,
+    banner: cd.banner,
+    pages: [
+      { id: blockId(), key: "accueil", label: "Accueil", slug: "accueil", blocks: homeBlocks.length ? homeBlocks : [newBlock("about")] },
+      { id: blockId(), key: "contact", label: "Contact", slug: "contact", blocks: [leadForm ?? newBlock("leadForm")] },
+    ],
+  };
+}
 
 export type SaveSiteResult = { ok: true; revision: number; savedAt: string } | { ok: false; conflict: true; revision: number };
 
@@ -70,9 +92,9 @@ export async function listSitesForActor(actor: Actor) {
     .limit(200);
 }
 
-export async function createSite(actor: Actor, input: { title: string; template?: string; cardId?: string | null }) {
+export async function createSite(actor: Actor, input: { title: string; template?: string; fromCardId?: string | null }) {
   assertCanManage(actor);
-  const title = input.title.trim().slice(0, 120) || "Mon mini-site";
+  let title = input.title.trim().slice(0, 120) || "Mon mini-site";
   return db.transaction(async (tx) => {
     await lockOrganization(tx, actor.organization.id);
     const ent = await loadEntitlement(actor.organization.id, tx);
@@ -81,16 +103,22 @@ export async function createSite(actor: Actor, input: { title: string; template?
     if ((await countActiveSites(tx, actor.organization.id)) >= ent.quotas.cards) {
       throw new DomainError("quota_exceeded", "Vous avez atteint le nombre de mini-sites de votre formule.");
     }
-    const doc = buildSiteTemplate(input.template ?? "vierge");
+
+    // À partir d'une carte (reprise du contenu) ou d'un modèle métier.
+    let cardId: string | null = null;
+    let doc: SiteDocument;
+    if (input.fromCardId) {
+      const card = await getCardForActor(actor, input.fromCardId, tx);
+      doc = siteDocFromCard(card.draft);
+      cardId = card.id;
+      if (!input.title.trim()) title = card.title;
+    } else {
+      doc = buildSiteTemplate(input.template ?? "vierge");
+    }
     const parsed = parseSiteDocument(doc);
-    if (!parsed.success) throw new DomainError("invalid", "Modèle de mini-site invalide.");
+    if (!parsed.success) throw new DomainError("invalid", "Contenu de mini-site invalide.");
     await assertSiteMediaOwnership(tx, actor.organization.id, parsed.data);
 
-    let cardId: string | null = null;
-    if (input.cardId) {
-      const [c] = await tx.select({ id: schema.card.id }).from(schema.card).where(and(eq(schema.card.id, input.cardId), eq(schema.card.organizationId, actor.organization.id)));
-      cardId = c?.id ?? null;
-    }
     const id = newId();
     await tx.insert(schema.site).values({
       id,

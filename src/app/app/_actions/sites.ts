@@ -5,7 +5,7 @@ import { requireOrgAction } from "@/lib/context";
 import { run } from "@/lib/action-result";
 import * as sites from "@/lib/sites/service";
 
-export async function createSiteAction(input: { title: string; template?: string }) {
+export async function createSiteAction(input: { title: string; template?: string; fromCardId?: string }) {
   return run(async () => {
     const { id } = await sites.createSite(await requireOrgAction("cards.create"), input);
     revalidatePath("/app/mini-sites");

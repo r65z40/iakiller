@@ -25,14 +25,15 @@ export async function organizationDetail(staff: Staff, orgId: string) {
   assert(staff, "platform.view");
   const [org] = await db.select().from(schema.organization).where(eq(schema.organization.id, orgId));
   if (!org) throw new DomainError("not_found", "Organisation introuvable");
-  const [members, cards, subs, orders, ent] = await Promise.all([
+  const [members, cards, sites, subs, orders, ent] = await Promise.all([
     db.select({ membership: schema.membership, email: schema.user.email, name: schema.user.name }).from(schema.membership).innerJoin(schema.user, eq(schema.user.id, schema.membership.userId)).where(eq(schema.membership.organizationId, orgId)),
     db.select({ id: schema.card.id, title: schema.card.title, slug: schema.card.slug, status: schema.card.status, disabledAt: schema.card.disabledAt, adminSuspendedAt: schema.card.adminSuspendedAt, adminSuspendedReason: schema.card.adminSuspendedReason }).from(schema.card).where(eq(schema.card.organizationId, orgId)),
+    db.select({ id: schema.site.id, title: schema.site.title, slug: schema.site.slug, status: schema.site.status, adminSuspendedAt: schema.site.adminSuspendedAt }).from(schema.site).where(eq(schema.site.organizationId, orgId)),
     db.select().from(schema.subscription).where(eq(schema.subscription.organizationId, orgId)),
     db.select().from(schema.serviceOrder).where(eq(schema.serviceOrder.organizationId, orgId)),
     loadEntitlement(orgId),
   ]);
-  return { org, members, cards, subs, orders, ent };
+  return { org, members, cards, sites, subs, orders, ent };
 }
 
 export async function setOrganizationSuspended(staff: Staff, orgId: string, suspended: boolean, reason: string) {
@@ -49,6 +50,15 @@ export async function setCardSuspended(staff: Staff, cardId: string, suspended: 
   if (!card) throw new DomainError("not_found", "Carte introuvable");
   await db.update(schema.card).set({ adminSuspendedAt: suspended ? new Date() : null, adminSuspendedReason: suspended ? reason.trim().slice(0, 500) : null, updatedAt: new Date() }).where(eq(schema.card.id, cardId));
   await audit({ organizationId: card.orgId, actorUserId: staff.id, actorType: "staff", action: suspended ? "admin.card_suspend" : "admin.card_restore", targetType: "card", targetId: cardId, metadata: { reason } });
+}
+
+export async function setSiteSuspended(staff: Staff, siteId: string, suspended: boolean, reason: string) {
+  assert(staff, "platform.cards.suspend");
+  if (suspended && reason.trim().length < 5) throw new DomainError("invalid", "Motif obligatoire.");
+  const [site] = await db.select({ orgId: schema.site.organizationId }).from(schema.site).where(eq(schema.site.id, siteId));
+  if (!site) throw new DomainError("not_found", "Mini-site introuvable");
+  await db.update(schema.site).set({ adminSuspendedAt: suspended ? new Date() : null, updatedAt: new Date() }).where(eq(schema.site.id, siteId));
+  await audit({ organizationId: site.orgId, actorUserId: staff.id, actorType: "staff", action: suspended ? "admin.site_suspend" : "admin.site_restore", targetType: "site", targetId: siteId, metadata: { reason } });
 }
 
 export async function searchUsers(staff: Staff, q: string) {

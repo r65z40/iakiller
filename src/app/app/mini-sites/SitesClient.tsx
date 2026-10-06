@@ -6,16 +6,19 @@ import { buttonClass } from "@/components/ui";
 import { SITE_TEMPLATES } from "@/lib/sites/defaults";
 import { createSiteAction, deleteSiteAction } from "@/app/app/_actions/sites";
 
-export function CreateSite() {
+export function CreateSite({ cards = [] }: { cards?: { id: string; title: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [fromCard, setFromCard] = useState("");
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const input = { title: String(fd.get("title") ?? ""), template: String(fd.get("template") ?? "vierge") };
+    const input = fromCard
+      ? { title: String(fd.get("title") ?? ""), fromCardId: fromCard }
+      : { title: String(fd.get("title") ?? ""), template: String(fd.get("template") ?? "vierge") };
     setError(null);
     start(async () => {
       const r = await createSiteAction(input);
@@ -32,17 +35,27 @@ export function CreateSite() {
       <form onSubmit={onSubmit} className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-xl">
         <h2 id="new-site-title" className="text-lg font-bold">Nouveau mini-site</h2>
         <label className="block text-[13px] font-semibold">Nom du mini-site<input name="title" required maxLength={120} placeholder="Ex. Plomberie Durand" className={field} /></label>
-        <fieldset>
-          <legend className="text-[13px] font-semibold">Modèle de départ</legend>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {SITE_TEMPLATES.map((t, i) => (
-              <label key={t.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line p-2 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand">
-                <input type="radio" name="template" value={t.id} defaultChecked={i === 0} className="mt-0.5" />
-                <span><span className="block font-semibold">{t.label}</span><span className="block text-xs text-muted">{t.description}</span></span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        {cards.length > 0 && (
+          <label className="block text-[13px] font-semibold">Partir d&apos;une carte existante <span className="font-normal text-muted">(reprend thème, logo, coordonnées, blocs)</span>
+            <select value={fromCard} onChange={(e) => setFromCard(e.target.value)} className={field}>
+              <option value="">Non — choisir un modèle ci-dessous</option>
+              {cards.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+            </select>
+          </label>
+        )}
+        {!fromCard && (
+          <fieldset>
+            <legend className="text-[13px] font-semibold">Modèle de départ</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {SITE_TEMPLATES.map((t, i) => (
+                <label key={t.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-line p-2 text-sm has-[:checked]:border-brand has-[:checked]:ring-1 has-[:checked]:ring-brand">
+                  <input type="radio" name="template" value={t.id} defaultChecked={i === 0} className="mt-0.5" />
+                  <span><span className="block font-semibold">{t.label}</span><span className="block text-xs text-muted">{t.description}</span></span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
         {error && <p role="alert" className="text-sm text-[#b00020]">{error}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => setOpen(false)} className={buttonClass("ghost", "sm")}>Annuler</button>

@@ -40,6 +40,11 @@ export async function GET(req: Request, ctx: RouteContext<"/r/[token]">) {
   if (dest.type === "url" && dest.url) {
     return finalize(NextResponse.redirect(dest.url, 302));
   }
+  // Destination « mini-site » : /s/{org}/{slug} de la même organisation (org déduite de la carte).
+  if (dest.type === "site" && dest.site) {
+    const orgSlug = result.path.split("/")[1];
+    return finalize(NextResponse.redirect(`${base}/s/${orgSlug}/${dest.site}?src=qr${utm}`, 302));
+  }
   const anchor = dest.type === "section" && dest.section ? `#${dest.section}` : "";
   return finalize(NextResponse.redirect(`${base}${result.path}?src=qr${utm}${anchor}`, 302));
 }

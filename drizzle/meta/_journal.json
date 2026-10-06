@@ -99,6 +99,13 @@
       "when": 1791213051838,
       "tag": "0013_mini_sites",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791325418859,
+      "tag": "0014_site_views",
+      "breakpoints": true
     }
   ]
 }
