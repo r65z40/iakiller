@@ -10,6 +10,9 @@ export const FAQ: readonly (readonly [string, string])[] = [
   ["Mes cartes apparaissent-elles sur Google ?", "Par défaut, non : l'indexation est désactivée. Le propriétaire de l'organisation peut l'activer. Aucun annuaire public des cartes n'est proposé."],
   ["Les statistiques sont-elles exactes ?", "Ce sont des mesures avec des limites, expliquées dans votre espace : un clic « Appeler » mesure une intention, pas un appel passé ; les robots sont filtrés sans garantie de perfection ; aucun « visiteur unique » n'est calculé."],
   ["Qui voit les demandes envoyées par le formulaire ?", "Uniquement les membres autorisés de votre organisation. Le visiteur est informé de la destination de ses données ; l'accord marketing est séparé et décoché par défaut."],
+  ["C'est juste une carte de visite ?", "Non. C'est aussi un mini-site vitrine multi-pages, un CRM pour suivre vos prospects et des relances automatiques. La carte et ses outils (QR, statistiques, formulaire, CRM) sont inclus dès la formule Solo ; le mini-site vitrine et les relances automatiques sont inclus à partir du Pro — et débloqués pendant tout l'essai."],
+  ["Qu'est-ce que le mini-site vitrine ?", "Un vrai site multi-pages (Accueil, Services, Réalisations, Contact) construit avec les mêmes blocs que vos cartes, en glisser-déposer, à partir d'un modèle métier. Thème, logo et coordonnées sont partagés : aucune double saisie. Son formulaire alimente directement votre CRM."],
+  ["Comment fonctionnent le CRM et les relances ?", "Chaque demande devient un prospect que vous faites avancer dans un pipeline (Nouveau → … → Gagné), avec tâches et notes. Les relances automatiques envoient un email ou créent une tâche de rappel au bon moment, une seule fois par prospect."],
   ["Comment se passe la création accompagnée ?", "Vous envoyez un brief et réglez la prestation ; nous préparons un brouillon que vous validez avant publication. La prestation n'inclut pas l'abonnement."],
 ] as const;
 

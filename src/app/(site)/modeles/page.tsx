@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMeta } from "@/lib/seo";
 import { DEMO_CARDS } from "@/lib/cards/demo";
 import { TEMPLATE_PRESETS } from "@/lib/cards/defaults";
@@ -22,6 +23,15 @@ export default function TemplatesPage() {
           </li>
         ))}
       </ul>
+
+      <div className="mt-14 flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-gradient-to-br from-brand-soft to-white p-8 ring-1 ring-brand/15">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full bg-brand px-3 py-1 text-sm font-bold text-white">Pro</span>
+          <h2 className="mt-3 text-2xl font-extrabold">Besoin de plus qu&apos;une carte ? Un mini-site vitrine.</h2>
+          <p className="mt-2 max-w-2xl text-muted">À partir du Pro, créez un vrai site multi-pages (Accueil, Services, Réalisations, Contact) avec des modèles par métier — artisan, beauté, restaurant, profession libérale — et les mêmes blocs que vos cartes.</p>
+        </div>
+        <Link href="/fonctionnement" className="rounded-lg bg-brand px-5 py-3 font-semibold text-white">Découvrir le mini-site</Link>
+      </div>
     </div>
   );
 }
