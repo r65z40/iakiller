@@ -5,6 +5,7 @@ import { PromoBanner } from "@/components/site/PromoBanner";
 const NAV = [
   ["/fonctionnement", "Fonctionnement"],
   ["/modeles", "Modèles"],
+  ["/mini-sites", "Mini-sites"],
   ["/tarifs", "Tarifs"],
   ["/entreprise", "Entreprises"],
   ["/creation-accompagnee", "Création accompagnée"],
