@@ -13,7 +13,9 @@ const FEATURES = [
   ["Rôles clairs", "Propriétaire, gestionnaires et collaborateurs ; la facturation peut être déléguée explicitement."],
   ["Départ d'un salarié", "Retirez l'accès et désactivez ses cartes immédiatement, QR code compris."],
   ["Statistiques par carte et par membre", "Comparez les cartes, filtrez par collaborateur, exportez en CSV."],
-  ["Prospects partagés", "Les demandes reçues sont visibles par les personnes autorisées uniquement."],
+  ["CRM partagé", "Les demandes reçues alimentent un pipeline commun, visible par les personnes autorisées, avec tâches et relances automatiques."],
+  ["Mini-site vitrine", "Un site d'entreprise multi-pages, aux couleurs de la société, construit avec les mêmes blocs que vos cartes."],
+  ["Un seul endroit", "Cartes, mini-site, prospects et statistiques réunis — pas d'outil marketing supplémentaire à gérer."],
 ];
 
 export default function EnterprisePage() {

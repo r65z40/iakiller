@@ -27,10 +27,14 @@ export default async function CardEditorPage({ params }: PageProps<"/app/cartes/
   }
   if (card.status === "archived") notFound();
 
-  const [media, versions, brand] = await Promise.all([
+  const [media, versions, brand, siteRows] = await Promise.all([
     listMedia(ctx),
     listVersions(ctx, id),
     db.select().from(schema.brandSettings).where(eq(schema.brandSettings.organizationId, ctx.organization.id)).then((r) => r[0] ?? null),
+    // Mini-sites publiés : destinations possibles d'un QR intelligent (uniquement si la suite est incluse).
+    ctx.entitlement.marketingSuite
+      ? db.select({ slug: schema.site.slug, title: schema.site.title }).from(schema.site).where(and(eq(schema.site.organizationId, ctx.organization.id), eq(schema.site.status, "published")))
+      : Promise.resolve([] as { slug: string; title: string }[]),
   ]);
   const manage = can(ctx, "cards.manageAll");
   const members = manage
@@ -81,6 +85,7 @@ export default async function CardEditorPage({ params }: PageProps<"/app/cartes/
       members={members}
       assignees={assignees}
       wallet={{ apple: walletAvailability().apple ? "#" : undefined, google: walletAvailability().google ? "#" : undefined }}
+      sites={siteRows}
     />
   );
 }

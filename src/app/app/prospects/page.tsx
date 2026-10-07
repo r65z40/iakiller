@@ -1,40 +1,45 @@
 import { DownloadLink } from "@/components/ui/DownloadLink";
 import { requireOrgPage } from "@/lib/context";
 import { listLeads } from "@/lib/leads/service";
+import { sourceLabel } from "@/lib/leads/crm";
 import { can } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState, PageHeader } from "@/components/ui";
-import { LeadRow } from "./LeadRow";
+import { Board, type BoardLead } from "./Board";
+import { NewLeadButton } from "./NewLeadButton";
 
-const STATUS = { "": "Tous", new: "Nouveaux", contacted: "Contactés", done: "Traités" } as const;
-
-export default async function LeadsPage({ searchParams }: PageProps<"/app/prospects">) {
+export default async function LeadsPage() {
   const ctx = await requireOrgPage();
-  const sp = await searchParams;
-  const status = typeof sp.statut === "string" ? sp.statut : "";
-  const page = Math.max(0, Number(sp.page ?? 0) || 0);
-  const leads = await listLeads(ctx, { status: status || undefined, limit: 50, offset: page * 50 });
+  const rows = await listLeads(ctx, { limit: 1000 });
+  const leads: BoardLead[] = rows.map(({ lead, cardTitle, assigneeName }) => ({
+    id: lead.id,
+    name: lead.name ?? "",
+    company: lead.company,
+    stage: lead.stage,
+    source: lead.source,
+    sourceLabel: sourceLabel(lead.source, lead.sourceDetail),
+    tags: lead.tags ?? [],
+    assigneeName: assigneeName ?? null,
+    cardTitle: cardTitle ?? "Carte supprimée",
+    createdAt: formatDateTime(lead.createdAt),
+  }));
   return (
     <>
-      <PageHeader title="Prospects" description="Demandes envoyées depuis le formulaire de vos cartes. Visibles uniquement par votre organisation, selon vos droits." actions={<DownloadLink href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</DownloadLink>} />
-      <nav aria-label="Filtrer par statut" className="mb-4 flex flex-wrap gap-2">
-        {Object.entries(STATUS).map(([k, label]) => (
-          <a key={k} href={k ? `/app/prospects?statut=${k}` : "/app/prospects"} aria-current={status === k ? "page" : undefined} className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${status === k ? "bg-brand text-white ring-brand" : "bg-white ring-line"}`}>{label}</a>
-        ))}
-      </nav>
+      <PageHeader
+        title="Prospects"
+        description="Votre pipeline commercial. Glissez une fiche d'une colonne à l'autre pour faire avancer la demande. Visible selon vos droits."
+        actions={
+          <div className="flex items-center gap-3">
+            {can(ctx, "leads.viewAll") && <NewLeadButton />}
+            <DownloadLink href="/app/prospects/export" className="text-sm font-semibold text-brand underline">Exporter en CSV</DownloadLink>
+          </div>
+        }
+      />
       {leads.length === 0 ? (
         <EmptyState title="Aucune demande">Ajoutez un bloc « Formulaire de contact » à une carte pour recevoir des demandes.</EmptyState>
       ) : (
-        <ul className="space-y-3">
-          {leads.map(({ lead, cardTitle }) => (
-            <LeadRow key={lead.id} canDelete={can(ctx, "leads.viewAll")} lead={{ id: lead.id, name: lead.name, email: lead.email, phone: lead.phone, company: lead.company, message: lead.message, extra: lead.extra ?? [], photos: lead.photoIds ?? [], status: lead.status, notes: lead.notes ?? "", marketingConsent: lead.marketingConsent, createdAt: formatDateTime(lead.createdAt), cardTitle: cardTitle ?? "Carte supprimée" }} />
-          ))}
-        </ul>
+        <Board initialLeads={leads} />
       )}
-      <div className="mt-4 flex gap-3 text-sm">
-        {page > 0 && <a className="text-brand underline" href={`/app/prospects?statut=${status}&page=${page - 1}`}>← Précédents</a>}
-        {leads.length === 50 && <a className="text-brand underline" href={`/app/prospects?statut=${status}&page=${page + 1}`}>Suivants →</a>}
-      </div>
     </>
   );
 }

@@ -100,7 +100,21 @@ test("formulaire prospect public → visible dans l'espace", async ({ page, brow
 
   await page.goto("/app/prospects");
   await expect(page.getByText("Paul Visiteur")).toBeVisible();
+  // La carte du pipeline ouvre la fiche détaillée, où figure le message.
+  await page.getByRole("link", { name: /Paul Visiteur/ }).click();
+  await expect(page.getByRole("heading", { name: "Paul Visiteur" })).toBeVisible();
   await expect(page.getByText("Je souhaite un devis.")).toBeVisible();
+});
+
+test("mini-site : création depuis un modèle et ouverture de l'éditeur", async ({ page }) => {
+  await signUpAndCreateOrg(page, `Mini-site E2E ${Date.now()}`);
+  await page.goto("/app/mini-sites");
+  await page.getByRole("button", { name: "+ Nouveau mini-site" }).click();
+  await page.getByLabel("Nom du mini-site").fill("Ma vitrine");
+  await page.getByRole("button", { name: /Créer et ouvrir/ }).click();
+  await page.waitForURL(/\/app\/mini-sites\/[a-z0-9]+$/i, { timeout: 40000 });
+  await expect(page.getByText(/Blocs de « Accueil »/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: "+ Page" })).toBeVisible();
 });
 
 test("routes protégées et QR inconnu", async ({ page }) => {

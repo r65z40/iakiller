@@ -30,6 +30,10 @@ export interface CardViewProps {
   wallet?: { apple?: string; google?: string };
   analytics?: { enabled: boolean; requireConsent: boolean; source: string; utm?: Record<string, string> };
   leadFormToken?: string;
+  /** Destination du formulaire : carte (défaut) ou mini-site. */
+  leadEndpoint?: "card" | "site";
+  /** « card » : colonne étroite (400px, défaut). « site » : largeur de lecture confortable, fond pleine largeur. */
+  layout?: "card" | "site";
   footer?: { brandName: string; privacyUrl: string; legalUrl: string };
   /** Bloc mis en évidence dans l'éditeur. */
   highlightBlockId?: string | null;
@@ -179,8 +183,8 @@ export function CardView(props: CardViewProps) {
   return (
     <div style={style} className="card-root w-full">
       <article
-        className="mx-auto w-full max-w-[400px] overflow-hidden bg-[var(--c-card)] shadow-[0_8px_30px_rgba(20,33,61,0.08)]"
-        style={{ borderRadius: `calc(var(--radius) + 4px)` }}
+        className={`mx-auto w-full overflow-hidden bg-[var(--c-card)] shadow-[0_8px_30px_rgba(20,33,61,0.08)] ${props.layout === "site" ? "max-w-3xl lg:max-w-4xl" : "max-w-[400px]"}`}
+        style={{ borderRadius: props.layout === "site" ? 0 : `calc(var(--radius) + 4px)` }}
         aria-label={`Carte de visite de ${[doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ") || doc.identity.company}`}
       >
         <Header doc={doc} media={media} align={align} selectable={selectable} />
@@ -204,6 +208,9 @@ export function CardView(props: CardViewProps) {
                   wallet={props.wallet}
                   publicToken={props.publicToken}
                   leadFormToken={props.leadFormToken}
+                  leadSource={props.analytics?.source}
+                  leadUtmCampaign={props.analytics?.utm?.campaign}
+                  leadEndpoint={props.leadEndpoint}
                   getViewId={() => (analyticsActive ? viewId.current || null : null)}
                 />
               </div>
@@ -465,6 +472,9 @@ function Block(props: {
   publicToken?: string;
   leadFormToken?: string;
   getViewId?: () => string | null;
+  leadSource?: string;
+  leadUtmCampaign?: string;
+  leadEndpoint?: "card" | "site";
 }) {
   const { block, doc, track, mode, media } = props;
   const theme = doc.theme;
@@ -824,7 +834,7 @@ function Block(props: {
       return (
         <Section>
           <SectionTitle>{block.title}</SectionTitle>
-          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} getViewId={props.getViewId} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
+          <LeadForm block={block} mode={mode} publicToken={props.publicToken} formToken={props.leadFormToken} endpoint={props.leadEndpoint ?? "card"} getViewId={props.getViewId} source={props.leadSource} utmCampaign={props.leadUtmCampaign} company={doc.identity.company || [doc.identity.firstName, doc.identity.lastName].filter(Boolean).join(" ")} />
         </Section>
       );
   }
@@ -879,13 +889,15 @@ function VideoEmbed({ provider, videoId, title, mode, onPlay }: { provider: "you
 
 type LeadBlock = Extract<CardBlock, { type: "leadForm" }>;
 
-function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null }) {
+function LeadForm({ block, mode, publicToken, formToken, company, getViewId, source, utmCampaign, endpoint = "card" }: { block: LeadBlock; mode: "public" | "preview"; publicToken?: string; formToken?: string; company: string; getViewId?: () => string | null; source?: string; utmCampaign?: string; endpoint?: "card" | "site" }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fields = block.fields;
+  // Pièces jointes : seulement pour une carte (le mini-site n'a pas d'envoi de fichier public).
+  const allowPhotos = block.allowPhotos && endpoint === "card";
   const fieldDefs: { key: keyof LeadBlock["fields"]; label: string; type: string; autoComplete: string }[] = [
     { key: "name", label: "Nom", type: "text", autoComplete: "name" },
     { key: "email", label: "Email", type: "email", autoComplete: "email" },
@@ -907,9 +919,11 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
     const body: Record<string, unknown> = { token: publicToken, formToken, viewId: getViewId?.() ?? null };
     fd.forEach((v, k) => (body[k] = typeof v === "string" ? v : ""));
     body.marketingConsent = fd.get("marketingConsent") === "on";
-    if (block.allowPhotos && photos.length) body.photoIds = photos.map((p) => p.id);
+    if (source) body.source = source;
+    if (utmCampaign) body.utmCampaign = utmCampaign;
+    if (allowPhotos && photos.length) body.photoIds = photos.map((p) => p.id);
     try {
-      const res = await fetch("/api/public/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch(endpoint === "site" ? "/api/public/site-leads" : "/api/public/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (res.ok && data.ok) setState("sent");
       else {
@@ -989,7 +1003,7 @@ function LeadForm({ block, mode, publicToken, formToken, company, getViewId }: {
           </label>
         );
       })}
-      {block.allowPhotos && (
+      {allowPhotos && (
         <div>
           <p className="text-[13px] font-semibold">Photos <span className="font-normal text-[var(--c-muted)]">(facultatif — jusqu&apos;à {block.maxPhotos})</span></p>
           {photos.length > 0 && (

@@ -231,8 +231,8 @@ export const card = pgTable(
       {
         slug: string;
         label: string;
-        dest: { type: "card" | "section" | "url"; url?: string; section?: string };
-        campaign?: { dest: { type: "card" | "section" | "url"; url?: string; section?: string }; startsAt?: string; endsAt?: string };
+        dest: { type: "card" | "section" | "url" | "site"; url?: string; section?: string; site?: string };
+        campaign?: { dest: { type: "card" | "section" | "url" | "site"; url?: string; section?: string; site?: string }; startsAt?: string; endsAt?: string };
       }[]
     >(),
     /** Incrémenté à chaque sauvegarde du brouillon ; sert à détecter les conflits. */
@@ -353,6 +353,66 @@ export const slugRedirect = pgTable(
   (t) => [
     uniqueIndex("slug_redirect_org_uq").on(t.oldSlug).where(sql`kind = 'organization'`),
     uniqueIndex("slug_redirect_card_uq").on(t.organizationId, t.oldSlug).where(sql`kind = 'card'`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Mini-sites (site vitrine multi-pages, même modèle de blocs que les cartes)
+// ---------------------------------------------------------------------------
+
+export const site = pgTable(
+  "site",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    publicToken: text("public_token").notNull().unique(),
+    status: text("status").notNull().default("draft"), // draft | published | archived
+    title: text("title").notNull(),
+    draft: jsonb("draft").$type<unknown>().notNull(),
+    draftRevision: integer("draft_revision").notNull().default(1),
+    draftUpdatedAt: ts("draft_updated_at").notNull().defaultNow(),
+    publishedVersionId: text("published_version_id"),
+    publishedAt: ts("published_at"),
+    /** Carte liée (facultatif) : prépare le partage de données carte ↔ mini-site. */
+    cardId: text("card_id").references(() => card.id, { onDelete: "set null" }),
+    disabledAt: ts("disabled_at"),
+    adminSuspendedAt: ts("admin_suspended_at"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("site_org_slug_uq").on(t.organizationId, t.slug), index("site_org_status_idx").on(t.organizationId, t.status)],
+);
+
+/** Vues d'un mini-site, agrégées par jour (sans cookie ni identifiant du visiteur). */
+export const siteView = pgTable(
+  "site_view",
+  {
+    siteId: text("site_id").notNull().references(() => site.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.siteId, t.day] }), index("site_view_org_idx").on(t.organizationId)],
+);
+
+/** Version publiée immuable d'un mini-site (comme cardVersion pour les cartes). */
+export const siteVersion = pgTable(
+  "site_version",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id").notNull().references(() => site.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    number: integer("number").notNull(),
+    document: jsonb("document").$type<unknown>().notNull(),
+    mediaIds: jsonb("media_ids").$type<string[]>().notNull().default([]),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("site_version_site_number_uq").on(t.siteId, t.number),
+    index("site_version_media_ids_gin").using("gin", t.mediaIds.op("jsonb_path_ops")),
   ],
 );
 
@@ -667,8 +727,18 @@ export const lead = pgTable(
     photoIds: jsonb("photo_ids").$type<string[]>(),
     /** Accord marketing distinct, facultatif, décoché par défaut. */
     marketingConsent: boolean("marketing_consent").notNull().default(false),
-    /** new | contacted | done */
+    /** Ancien statut (new | contacted | done), conservé pour compatibilité ; voir `stage`. */
     status: text("status").notNull().default("new"),
+    /** Étape du pipeline CRM (nouveau | a_contacter | contacte | devis_a_preparer | devis_envoye | a_relancer | gagne | perdu). */
+    stage: text("stage").notNull().default("nouveau"),
+    /** Source : qr | campaign | direct | manual | import. */
+    source: text("source").notNull().default("direct"),
+    /** Précision de la source (ex. slug de la variante de QR, nom de campagne utm). */
+    sourceDetail: text("source_detail"),
+    /** Étiquettes libres. */
+    tags: jsonb("tags").$type<string[]>(),
+    /** Membre responsable du prospect. */
+    assignedToId: text("assigned_to_id").references(() => user.id, { onDelete: "set null" }),
     notes: text("notes"),
     /** Empreinte de déduplication (carte + email/téléphone + message). */
     dedupeHash: text("dedupe_hash").notNull(),
@@ -679,7 +749,77 @@ export const lead = pgTable(
     index("lead_org_time_idx").on(t.organizationId, t.createdAt),
     index("lead_dedupe_idx").on(t.dedupeHash, t.createdAt),
     index("lead_card_time_idx").on(t.cardId, t.createdAt),
+    index("lead_org_stage_idx").on(t.organizationId, t.stage),
   ],
+);
+
+/** Tâches / rappels rattachés à un prospect (CRM). */
+export const leadTask = pgTable(
+  "lead_task",
+  {
+    id: text("id").primaryKey(),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    dueAt: ts("due_at"),
+    doneAt: ts("done_at"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_task_lead_idx").on(t.leadId), index("lead_task_org_due_idx").on(t.organizationId, t.dueAt)],
+);
+
+/** Historique des actions sur un prospect (changement d'étape, note, tâche…). */
+export const leadActivity = pgTable(
+  "lead_activity",
+  {
+    id: text("id").primaryKey(),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    /** stage | note | task | assign | created | automation */
+    kind: text("kind").notNull(),
+    text: text("text").notNull().default(""),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("lead_activity_lead_idx").on(t.leadId, t.createdAt)],
+);
+
+/** Règle de relance automatique (déclencheur → délai → action). */
+export const leadAutomation = pgTable(
+  "lead_automation",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    /** Déclencheur : stage_entered | no_activity */
+    trigger: text("trigger").notNull(),
+    /** Étape concernée (requise pour stage_entered ; filtre facultatif pour no_activity). */
+    triggerStage: text("trigger_stage"),
+    /** Délai, en heures, après l'évènement déclencheur. */
+    delayHours: integer("delay_hours").notNull().default(24),
+    /** Action : email | task */
+    action: text("action").notNull(),
+    emailSubject: text("email_subject"),
+    emailBody: text("email_body"),
+    taskTitle: text("task_title"),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("lead_automation_org_idx").on(t.organizationId)],
+);
+
+/** Passage d'une règle sur un prospect : garantit qu'une relance ne se déclenche qu'une fois. */
+export const leadAutomationRun = pgTable(
+  "lead_automation_run",
+  {
+    automationId: text("automation_id").notNull().references(() => leadAutomation.id, { onDelete: "cascade" }),
+    leadId: text("lead_id").notNull().references(() => lead.id, { onDelete: "cascade" }),
+    firedAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.automationId, t.leadId] }), index("lead_automation_run_lead_idx").on(t.leadId)],
 );
 
 // ---------------------------------------------------------------------------

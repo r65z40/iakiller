@@ -20,11 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? [
         { href: "/app", label: "Tableau de bord" },
         { href: "/app/cartes", label: "Cartes" },
+        ...(can(ctx, "cards.create") && ctx.entitlement.marketingSuite ? [{ href: "/app/mini-sites", label: "Mini-sites" }] : []),
         { href: "/app/medias", label: "Médias" },
         ...(can(ctx, "brand.update") ? [{ href: "/app/marque", label: "Identité d'entreprise" }] : []),
         ...(can(ctx, "members.view") ? [{ href: "/app/membres", label: "Membres" }] : []),
         { href: "/app/statistiques", label: "Statistiques" },
         { href: "/app/prospects", label: "Prospects" },
+        ...(can(ctx, "leads.viewAll") && ctx.entitlement.marketingSuite ? [{ href: "/app/relances", label: "Relances auto" }] : []),
         ...(can(ctx, "billing.view") ? [{ href: "/app/abonnement", label: "Abonnement et factures" }] : []),
         ...(can(ctx, "service.order") ? [{ href: "/app/prestations", label: "Création accompagnée" }] : []),
         { href: "/app/assistance", label: "Assistance" },

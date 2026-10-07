@@ -46,6 +46,14 @@ export async function suspendCardAction(fd: FormData) {
   });
 }
 
+export async function suspendSiteAction(fd: FormData) {
+  await act(`/admin/organisations/${s(fd, "orgId")}`, "platform.cards.suspend", async (st) => {
+    const suspend = s(fd, "suspend") === "1";
+    await admin.setSiteSuspended(st, s(fd, "siteId"), suspend, s(fd, "reason"));
+    return suspend ? "Mini-site suspendu." : "Mini-site rétabli.";
+  });
+}
+
 export async function syncBillingAction(fd: FormData) {
   const id = s(fd, "id");
   await act(`/admin/organisations/${id}`, "platform.billing.sync", async (st) => `${await admin.syncOrganizationBilling(st, id)} abonnement(s) resynchronisé(s).`);

@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/format";
 import { DomainError } from "@/lib/errors";
 import { Badge, Button, PageHeader, Panel } from "@/components/ui";
 import { Flash } from "../../_lib/Flash";
-import { enterSupportModeAction, grantAccessAction, suspendCardAction, suspendOrgAction, syncBillingAction } from "../../_lib/actions";
+import { enterSupportModeAction, grantAccessAction, suspendCardAction, suspendOrgAction, suspendSiteAction, syncBillingAction } from "../../_lib/actions";
 
 export default async function AdminOrgDetail({ params, searchParams }: PageProps<"/admin/organisations/[id]">) {
   const staff = await requireStaffPage();
@@ -63,6 +63,21 @@ export default async function AdminOrgDetail({ params, searchParams }: PageProps
           ))}
         </ul>
       </Panel>
+      {d.sites.length > 0 && (
+        <Panel title="Mini-sites" className="mt-6">
+          <ul className="divide-y divide-line text-sm">
+            {d.sites.map((st) => (
+              <li key={st.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span><strong>{st.title}</strong> · /s/{d.org.slug}/{st.slug} · {st.status}{st.adminSuspendedAt ? " · SUSPENDU" : ""}</span>
+                <form action={suspendSiteAction} className="flex items-center gap-2">
+                  <input type="hidden" name="siteId" value={st.id} /><input type="hidden" name="orgId" value={id} />
+                  {st.adminSuspendedAt ? (<><input type="hidden" name="suspend" value="0" /><input type="hidden" name="reason" value="" /><Button size="sm" variant="secondary">Rétablir</Button></>) : (<><input type="hidden" name="suspend" value="1" /><input name="reason" placeholder="Motif" required minLength={5} aria-label={`Motif de suspension de ${st.title}`} className="min-h-9 rounded-lg border border-line px-2" /><Button size="sm" variant="danger">Suspendre</Button></>)}
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
     </>
   );
 }

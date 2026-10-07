@@ -73,6 +73,10 @@ export const templates = {
     );
   },
 
+  // Relance automatique envoyée à un prospect. Objet et corps définis par l'organisation.
+  leadFollowUp: (p: { subject: string; body: string }) =>
+    layout(p.subject || "Suite à votre demande", p.body.split(/\n+/).map((l) => l.trim()).filter(Boolean)),
+
   serviceOrderUpdate: (p: { status: string; url: string }) =>
     layout("Votre création accompagnée avance", [`Nouveau statut : ${p.status}.`], { label: "Suivre ma demande", url: p.url }),
 

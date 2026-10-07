@@ -6,7 +6,6 @@ import { cookies } from "next/headers";
 import { ACTIVE_ORG_COOKIE, getCurrentUser, requireOrgAction } from "@/lib/context";
 import { run } from "@/lib/action-result";
 import * as members from "@/lib/orgs/members";
-import * as leads from "@/lib/leads/service";
 import { DomainError } from "@/lib/errors";
 import type { OrgRole } from "@/lib/permissions";
 
@@ -64,18 +63,3 @@ export async function acceptInvitationAction(token: string) {
   return r;
 }
 
-export async function updateLeadAction(leadId: string, patch: { status?: string; notes?: string }) {
-  return run(async () => {
-    await leads.updateLead(await requireOrgAction(), leadId, patch);
-    revalidatePath("/app/prospects");
-    return "Enregistré.";
-  });
-}
-
-export async function deleteLeadAction(leadId: string) {
-  return run(async () => {
-    await leads.deleteLead(await requireOrgAction(), leadId);
-    revalidatePath("/app/prospects");
-    return "Demande supprimée.";
-  });
-}

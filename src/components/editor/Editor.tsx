@@ -28,6 +28,8 @@ export interface EditorProps {
   members: { userId: string; name: string; email: string }[];
   assignees: string[];
   wallet: { apple?: string; google?: string };
+  /** Mini-sites publiés de l'organisation (destinations possibles d'un QR intelligent). */
+  sites: { slug: string; title: string }[];
 }
 
 type Selection = string | "identity" | "banner" | "theme" | "settings" | "qr" | "versions" | null;
@@ -267,7 +269,7 @@ export function Editor(props: EditorProps) {
     propsPanel = <ThemePanel theme={doc.theme} onChange={(theme) => commit({ ...doc, theme })} locks={props.locks} />;
   } else if (selection === "qr") {
     propsTitle = "QR code et partage";
-    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} initialVariants={props.card.qrVariants} sections={doc.blocks.filter((b) => !b.hidden).map((b) => ({ id: b.id, label: blockLabel(b.type) }))} scans={props.qrScans} />;
+    propsPanel = <QrPanel cardId={props.card.id} shortUrl={props.qrShortUrl} publicUrl={publicUrl} published={cardStatus === "published"} initialStyle={props.card.qrStyle} initialVariants={props.card.qrVariants} sections={doc.blocks.filter((b) => !b.hidden).map((b) => ({ id: b.id, label: blockLabel(b.type) }))} sites={props.sites} scans={props.qrScans} />;
   } else if (selection === "versions") {
     propsTitle = "Versions publiées";
     propsPanel = <VersionsPanel cardId={props.card.id} versions={props.versions} flush={autosave.flush} />;
@@ -382,15 +384,16 @@ function slugifyLabel(label: string): string {
   return label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
 }
 
-type QrDest = { type: "card" | "section" | "url"; url?: string; section?: string };
+type QrDest = { type: "card" | "section" | "url" | "site"; url?: string; section?: string; site?: string };
 type QrVariantT = { slug: string; label: string; dest: QrDest; campaign?: { dest: QrDest; startsAt?: string; endsAt?: string } };
 
-function DestEditor({ value, sections, onChange }: { value: QrDest; sections: { id: string; label: string }[]; onChange: (d: QrDest) => void }) {
+function DestEditor({ value, sections, sites, onChange }: { value: QrDest; sections: { id: string; label: string }[]; sites: { slug: string; title: string }[]; onChange: (d: QrDest) => void }) {
   return (
     <div className="space-y-2">
       <select value={value.type} onChange={(e) => onChange({ type: e.target.value as QrDest["type"] })} className="min-h-9 w-full rounded-lg border border-line px-2 text-sm">
         <option value="card">La carte numérique</option>
         {sections.length > 0 && <option value="section">Un bloc de la carte</option>}
+        {sites.length > 0 && <option value="site">Un mini-site</option>}
         <option value="url">Une adresse externe</option>
       </select>
       {value.type === "url" && (
@@ -402,11 +405,17 @@ function DestEditor({ value, sections, onChange }: { value: QrDest; sections: { 
           {sections.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </select>
       )}
+      {value.type === "site" && (
+        <select value={value.site ?? ""} onChange={(e) => onChange({ type: "site", site: e.target.value })} className="min-h-9 w-full rounded-lg border border-line px-2 text-sm">
+          <option value="">Choisir un mini-site…</option>
+          {sites.map((s) => <option key={s.slug} value={s.slug}>{s.title}</option>)}
+        </select>
+      )}
     </div>
   );
 }
 
-function QrVariantsPanel({ cardId, shortUrl, initial, sections, scans }: { cardId: string; shortUrl: string; initial: QrVariantT[]; sections: { id: string; label: string }[]; scans: Record<string, number> }) {
+function QrVariantsPanel({ cardId, shortUrl, initial, sections, sites, scans }: { cardId: string; shortUrl: string; initial: QrVariantT[]; sections: { id: string; label: string }[]; sites: { slug: string; title: string }[]; scans: Record<string, number> }) {
   const [variants, setVariants] = useState<QrVariantT[]>(initial);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -468,7 +477,7 @@ function QrVariantsPanel({ cardId, shortUrl, initial, sections, scans }: { cardI
 
               <div className="mt-2">
                 <p className="text-xs font-semibold">Destination</p>
-                <DestEditor value={v.dest} sections={sections} onChange={(dest) => { patch(v.slug, (x) => ({ ...x, dest })); }} />
+                <DestEditor value={v.dest} sections={sections} sites={sites} onChange={(dest) => { patch(v.slug, (x) => ({ ...x, dest })); }} />
               </div>
 
               <label className="mt-2 flex items-center gap-2 text-xs font-semibold">
@@ -478,7 +487,7 @@ function QrVariantsPanel({ cardId, shortUrl, initial, sections, scans }: { cardI
               {v.campaign && (
                 <div className="mt-1 space-y-2 rounded-lg bg-surface p-2">
                   <p className="text-[11px] font-semibold text-muted">Pendant la campagne, rediriger vers :</p>
-                  <DestEditor value={v.campaign.dest} sections={sections} onChange={(dest) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, dest } }))} />
+                  <DestEditor value={v.campaign.dest} sections={sections} sites={sites} onChange={(dest) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, dest } }))} />
                   <div className="grid grid-cols-2 gap-2">
                     <label className="text-[11px] font-semibold">Début<input type="datetime-local" value={v.campaign.startsAt ?? ""} onChange={(e) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, startsAt: e.target.value } }))} onBlur={() => save(variants)} className="mt-0.5 block w-full rounded border border-line px-1 text-xs" /></label>
                     <label className="text-[11px] font-semibold">Fin<input type="datetime-local" value={v.campaign.endsAt ?? ""} onChange={(e) => patch(v.slug, (x) => ({ ...x, campaign: { ...x.campaign!, endsAt: e.target.value } }))} onBlur={() => save(variants)} className="mt-0.5 block w-full rounded border border-line px-1 text-xs" /></label>
@@ -502,7 +511,7 @@ function QrVariantsPanel({ cardId, shortUrl, initial, sections, scans }: { cardI
   );
 }
 
-function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initialVariants, sections, scans }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" }; initialVariants: QrVariantT[]; sections: { id: string; label: string }[]; scans: Record<string, number> }) {
+function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initialVariants, sections, sites, scans }: { cardId: string; shortUrl: string; publicUrl: string; published: boolean; initialStyle: { dark: string; logo: "none" | "card" | "brand" }; initialVariants: QrVariantT[]; sections: { id: string; label: string }[]; sites: { slug: string; title: string }[]; scans: Record<string, number> }) {
   const [copied, setCopied] = useState(false);
   const [style, setStyle] = useState(initialStyle);
   const [version, setVersion] = useState(0);
@@ -543,7 +552,7 @@ function QrPanel({ cardId, shortUrl, publicUrl, published, initialStyle, initial
       </div>
       <p className="text-muted">Le QR code pointe vers un lien permanent ({shortUrl}). Il reste valable si vous changez l&apos;adresse de la carte, et affiche une page d&apos;indisponibilité si la carte est retirée ou si l&apos;abonnement prend fin.</p>
       {!published && <p className="font-semibold text-warning">La carte n&apos;est pas encore publiée : le QR mène pour l&apos;instant à une page d&apos;indisponibilité.</p>}
-      <QrVariantsPanel cardId={cardId} shortUrl={shortUrl} initial={initialVariants} sections={sections} scans={scans} />
+      <QrVariantsPanel cardId={cardId} shortUrl={shortUrl} initial={initialVariants} sections={sections} sites={sites} scans={scans} />
       <div>
         <p className="font-semibold">Adresse de la carte</p>
         <div className="mt-1 flex gap-2">
